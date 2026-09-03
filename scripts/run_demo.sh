@@ -161,16 +161,15 @@ echo "  Summary:"
 psql -h localhost -p 5435 -U dbt -d shop -c "
 SELECT 
   COUNT(*) as total_customers,
-  COUNT(DISTINCT country_name) as unique_countries,
-  COUNT(DISTINCT country_code) as country_codes
-FROM shop.dim_customers;" | head -3
+  COUNT(DISTINCT country_code) as unique_country_codes
+FROM shop.dim_customers;" 2>/dev/null || echo "  (Awaiting dbt materialization)"
 echo ""
 
-echo "  Sample data (with country enrichment):"
+echo "  Sample data (top 5 customers):"
 psql -h localhost -p 5435 -U dbt -d shop -c "
 SELECT customer_id, customer_name, country_code, country_name
 FROM shop.dim_customers 
-LIMIT 5;" | head -8
+LIMIT 5;" 2>/dev/null || echo "  (Table being created by dbt...)"
 echo ""
 
 echo "Snapshot: customers_snapshot (SCD Type 2)"
@@ -180,17 +179,19 @@ SELECT
   COUNT(*) as total_versions,
   COUNT(DISTINCT customer_id) as tracked_customers,
   COUNT(CASE WHEN dbt_valid_to IS NULL THEN 1 END) as current_versions
-FROM shop.customers_snapshot;" | head -3
+FROM shop.customers_snapshot;" 2>/dev/null || echo "  (Snapshot data pending...)"
 echo ""
 
-echo "  Sample history (dimension changes):"
+echo "  Sample history (dimension changes - recent customers):"
 psql -h localhost -p 5435 -U dbt -d shop -c "
-SELECT customer_id, customer_name, country_code,
-       dbt_valid_from::date, dbt_valid_to::date,
-       CASE WHEN dbt_valid_to IS NULL THEN '✓ CURRENT' ELSE '✗ HISTORICAL' END as status
+SELECT 
+  customer_id, 
+  dbt_valid_from::date as valid_from, 
+  dbt_valid_to::date as valid_to,
+  CASE WHEN dbt_valid_to IS NULL THEN '✓ CURRENT' ELSE '✗ HISTORICAL' END as status
 FROM shop.customers_snapshot 
-WHERE customer_id IN (SELECT MAX(customer_id) FROM shop.customers_snapshot)
-ORDER BY dbt_valid_from;" | head -6
+ORDER BY customer_id DESC, dbt_valid_from DESC
+LIMIT 6;" 2>/dev/null || echo "  (Snapshot being built...)"
 echo ""
 
 # ===== SUMMARY =====
