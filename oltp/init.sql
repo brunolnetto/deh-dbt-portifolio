@@ -1,15 +1,18 @@
-create table customers (
+CREATE SCHEMA IF NOT EXISTS shop;
+
+create table shop.customers (
     customer_id bigint generated always as identity primary key,
     name varchar(200) not null,
     email varchar(200) not null unique,
     country_code char(2) not null,
     created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
+    updated_at timestamptz not null default now(),
+    deleted_at timestamptz null
 );
 
-create table orders (
+create table shop.orders (
     order_id bigint generated always as identity primary key,
-    customer_id bigint not null references customers(customer_id),
+    customer_id bigint not null references shop.customers(customer_id),
     order_date timestamptz not null default now(),
     amount numeric(12, 2) not null,
     status varchar(20) not null
@@ -19,7 +22,7 @@ create table orders (
     deleted_at timestamptz null
 );
 
-insert into customers
+insert into shop.customers
     (name, email, country_code)
 values
     ('Ana Silva', 'ana@example.com', 'BR'),
@@ -31,7 +34,7 @@ values
     ('Grace Miller', 'grace@example.com', 'US'),
     ('Helena Martins', 'helena@example.com', 'BR');
 
-insert into orders
+insert into shop.orders
     (customer_id, order_date, amount, status)
 values
     (1, '2026-08-20 10:15:00', 120.50, 'paid'),
@@ -45,3 +48,4 @@ values
     (7, '2026-08-26 16:20:00', 42.75, 'cancelled'),
     (8, '2026-08-27 10:10:00', 199.90, 'paid');
 
+CREATE SCHEMA IF NOT EXISTS analytics;
