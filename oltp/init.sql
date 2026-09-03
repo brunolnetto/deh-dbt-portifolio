@@ -5,21 +5,21 @@ create table shop.customers (
     name varchar(200) not null,
     email varchar(200) not null unique,
     country_code char(2) not null,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-    deleted_at timestamptz null
+    created_at timestamp not null default now(),
+    updated_at timestamp not null default now(),
+    deleted_at timestamp null
 );
 
 create table shop.orders (
     order_id bigint generated always as identity primary key,
     customer_id bigint not null references shop.customers(customer_id),
-    order_date timestamptz not null default now(),
+    order_date timestamp not null default now(),
     amount numeric(12, 2) not null,
     status varchar(20) not null
         check (status in ('pending', 'paid', 'cancelled', 'refunded')),
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-    deleted_at timestamptz null
+    created_at timestamp not null default now(),
+    updated_at timestamp not null default now(),
+    deleted_at timestamp null
 );
 
 insert into shop.customers
