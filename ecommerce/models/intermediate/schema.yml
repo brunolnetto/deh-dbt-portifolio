@@ -57,15 +57,18 @@ models:
           - not_null
 
       - name: revenue
+        data_type: numeric(12, 2)
         data_tests:
           - not_null
 
       - name: refunded_amount
+        data_type: numeric(12, 2)
         data_tests:
           - not_null
 
       - name: average_paid_order_value
         description: Average amount among paid orders for this customer.
+        data_type: numeric(12, 2)
 
       - name: first_order_date
         description: Date of the customer's earliest active order.

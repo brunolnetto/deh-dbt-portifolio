@@ -32,13 +32,18 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   ecommerce:
     staging:
+      +schema: shop
       +tags: [staging]
+      +materialized: view
     intermediate:
+      +schema: shop
       +tags: [intermediate]
+      +materialized: view
     mart:
+      +schema: analytics
+      +materialized: table
       +tags: [marts]
       # fct_orders: incremental + contract requires on_schema_change to be explicit
       fct_orders:
         +on_schema_change: append_new_columns
-    example:
-      +materialized: view
+        +materialized: incremental

@@ -144,14 +144,14 @@ SELECT
   COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as soft_deleted,
   COUNT(CASE WHEN deleted_at IS NULL THEN 1 END) as active,
   ROUND(SUM(amount)::numeric, 2) as total_amount
-FROM shop.fct_orders;" | head -3
+FROM analytics.fct_orders;" | head -3
 echo ""
 
 echo "  Sample data (recent orders):"
 psql -h localhost -p 5435 -U dbt -d shop -c "
 SELECT order_id, customer_id, amount::numeric(10,2), status, 
        CASE WHEN deleted_at IS NULL THEN 'active' ELSE 'deleted' END as state
-FROM shop.fct_orders 
+FROM analytics.fct_orders 
 ORDER BY order_id DESC 
 LIMIT 5;" | head -8
 echo ""
@@ -162,13 +162,13 @@ psql -h localhost -p 5435 -U dbt -d shop -c "
 SELECT 
   COUNT(*) as total_customers,
   COUNT(DISTINCT country_code) as unique_country_codes
-FROM shop.dim_customers;" 2>/dev/null || echo "  (Awaiting dbt materialization)"
+FROM analytics.dim_customers;" 2>/dev/null || echo "  (Awaiting dbt materialization)"
 echo ""
 
 echo "  Sample data (top 5 customers):"
 psql -h localhost -p 5435 -U dbt -d shop -c "
 SELECT customer_id, customer_name, country_code, country_name
-FROM shop.dim_customers 
+FROM analytics.dim_customers 
 LIMIT 5;" 2>/dev/null || echo "  (Table being created by dbt...)"
 echo ""
 
@@ -179,7 +179,7 @@ SELECT
   COUNT(*) as total_versions,
   COUNT(DISTINCT customer_id) as tracked_customers,
   COUNT(CASE WHEN dbt_valid_to IS NULL THEN 1 END) as current_versions
-FROM shop.customers_snapshot;" 2>/dev/null || echo "  (Snapshot data pending...)"
+FROM analytics.customers_snapshot;" 2>/dev/null || echo "  (Snapshot data pending...)"
 echo ""
 
 echo "  Sample history (dimension changes - recent customers):"
@@ -189,7 +189,7 @@ SELECT
   dbt_valid_from::date as valid_from, 
   dbt_valid_to::date as valid_to,
   CASE WHEN dbt_valid_to IS NULL THEN '✓ CURRENT' ELSE '✗ HISTORICAL' END as status
-FROM shop.customers_snapshot 
+FROM analytics.customers_snapshot 
 ORDER BY customer_id DESC, dbt_valid_from DESC
 LIMIT 6;" 2>/dev/null || echo "  (Snapshot being built...)"
 echo ""
@@ -205,7 +205,4 @@ echo "  ✓ Incremental: Only changed rows processed (efficient)"
 echo "  ✓ Snapshot: Complete dimension change history (SCD Type 2)"
 echo "  ✓ Data Quality: dbt tests caught injected bad data"
 echo ""
-echo "📚 For detailed documentation:"
-echo "   • Patterns guide: WORKFLOWS.md"
-echo "   • Quick reference: WORKFLOWS_QUICK_REF.md"
-echo ""
+

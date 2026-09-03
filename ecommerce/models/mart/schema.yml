@@ -63,7 +63,7 @@ models:
     - not_null
   - name: amount
     description: Gross order amount.
-    data_type: numeric
+    data_type: numeric(12, 2)
     data_tests:
     - not_null
     - positive_values:
@@ -85,28 +85,28 @@ models:
     data_type: integer
   - name: recognized_revenue
     description: Amount recognized as revenue (non-zero only for paid orders).
-    data_type: numeric
+    data_type: numeric(12, 2)
     data_tests:
     - not_null
   - name: refunded_amount
     description: Amount refunded (non-zero only for refunded orders).
-    data_type: numeric
+    data_type: numeric(12, 2)
     data_tests:
     - not_null
   - name: created_at
     description: Timestamp when the order was created.
-    data_type: timestamp with time zone
+    data_type: timestamp without time zone
     data_tests:
     - not_null
   - name: updated_at
     description: Timestamp of the latest modification.
-    data_type: timestamp with time zone
+    data_type: timestamp without time zone
     data_tests:
     - not_null
   - name: deleted_at
     description: Soft deletion timestamp. NULL = active order. Retained in the fact
       table; analytical aggregations exclude deleted rows.
-    data_type: timestamp with time zone
+    data_type: timestamp without time zone
 - name: mart_customer_sales
   description: 'Business-facing customer sales summary. Grain: one row per customer.
 
