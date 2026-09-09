@@ -1,4 +1,4 @@
-# dbt Essentials — Pipeline Analítico com PostgreSQL
+# dbt Mastery — Pipeline Analítico com PostgreSQL
 
 Este projeto foi criado como material prático para um curso de **dbt (Data Build Tool)** focado em padrões de produção.
 
