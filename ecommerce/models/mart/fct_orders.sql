@@ -8,6 +8,7 @@
 select
     order_id,
     customer_id,
+    salesperson_id,
     order_date,
     status,
     amount,

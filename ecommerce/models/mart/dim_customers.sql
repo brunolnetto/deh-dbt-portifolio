@@ -7,6 +7,7 @@ select
     region,
     currency,
     created_at,
-    updated_at
+    updated_at,
+    deleted_at
 
 from {{ ref('int_customers_enriched') }}
