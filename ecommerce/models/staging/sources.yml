@@ -42,6 +42,9 @@ sources:
             data_tests:
               - not_null
 
+          - name: deleted_at
+            description: Soft delete timestamp for the customer.
+
       - name: orders
         description: Operational customer orders.
 
@@ -54,6 +57,11 @@ sources:
 
           - name: customer_id
             description: Customer that owns the order.
+            data_tests:
+              - not_null
+
+          - name: salesperson_id
+            description: Salesperson responsible for the order.
             data_tests:
               - not_null
 
@@ -81,4 +89,136 @@ sources:
             description: Timestamp of the latest modification.
             data_tests:
               - not_null
+
+          - name: deleted_at
+            description: Soft delete timestamp for the order.
+
+      - name: salespeople
+        description: Operational salespeople assigned to orders.
+
+        columns:
+          - name: salesperson_id
+            description: Primary key of the salesperson.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: name
+            description: Salesperson full name.
+            data_tests:
+              - not_null
+
+          - name: email
+            description: Salesperson email address.
+            data_tests:
+              - not_null
+
+          - name: region
+            description: Sales region associated with the seller.
+            data_tests:
+              - not_null
+
+          - name: created_at
+            description: Timestamp when the salesperson was created.
+            data_tests:
+              - not_null
+
+          - name: updated_at
+            description: Timestamp of the latest modification.
+            data_tests:
+              - not_null
+
+          - name: deleted_at
+            description: Soft delete timestamp for the salesperson.
+
+      - name: products
+        description: Catalog of commercial products sold by the shop.
+
+        columns:
+          - name: product_id
+            description: Primary key of the product.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: name
+            description: Product name.
+            data_tests:
+              - not_null
+
+          - name: category
+            description: Product category.
+            data_tests:
+              - not_null
+
+          - name: unit_price
+            description: Catalog unit price of the product.
+            data_tests:
+              - not_null
+
+          - name: is_active
+            description: Whether the product is active in the catalog.
+            data_tests:
+              - not_null
+
+          - name: created_at
+            description: Timestamp when the product was created.
+            data_tests:
+              - not_null
+
+          - name: updated_at
+            description: Timestamp of the latest modification.
+            data_tests:
+              - not_null
+
+          - name: deleted_at
+            description: Soft delete timestamp for the product.
+
+      - name: order_items
+        description: Line items composing each order.
+
+        columns:
+          - name: order_item_id
+            description: Primary key of the order item.
+            data_tests:
+              - not_null
+              - unique
+
+          - name: order_id
+            description: Parent order for this item.
+            data_tests:
+              - not_null
+
+          - name: product_id
+            description: Product referenced by the item.
+            data_tests:
+              - not_null
+
+          - name: quantity
+            description: Quantity ordered for the product.
+            data_tests:
+              - not_null
+
+          - name: unit_price
+            description: Price charged per product unit at order placement.
+            data_tests:
+              - not_null
+
+          - name: amount
+            description: Extended amount for the line item.
+            data_tests:
+              - not_null
+
+          - name: created_at
+            description: Timestamp when the order item was created.
+            data_tests:
+              - not_null
+
+          - name: updated_at
+            description: Timestamp of the latest modification.
+            data_tests:
+              - not_null
+
+          - name: deleted_at
+            description: Soft delete timestamp for the order item.
 

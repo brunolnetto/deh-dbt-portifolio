@@ -76,3 +76,13 @@ models:
       - name: last_order_date
         description: Date of the customer's most recent active order.
 
+  - name: int_time_spine
+    description: Daily date spine used by the semantic layer.
+
+    time_spine:
+      standard_granularity_column: date_day
+
+    columns:
+      - name: date_day
+        granularity: day
+

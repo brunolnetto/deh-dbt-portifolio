@@ -28,6 +28,8 @@ models:
   - name: currency
     data_tests:
     - not_null
+  - name: deleted_at
+    description: Soft deletion timestamp carried from the OLTP customer record.
 - name: fct_orders
   description: 'Atomic order fact table. Grain: one row per order. Soft-deleted records
     are retained; downstream aggregations filter them.
@@ -56,6 +58,15 @@ models:
         arguments:
           to: ref('dim_customers')
           field: customer_id
+  - name: salesperson_id
+    description: Salesperson that handled the order.
+    data_type: bigint
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_salespeople')
+          field: salesperson_id
   - name: order_date
     description: Date the order was placed.
     data_type: date
@@ -130,6 +141,124 @@ models:
     data_tests:
     - not_null
   - name: refunded_orders
+    data_tests:
+    - not_null
+  - name: revenue
+    data_tests:
+    - not_null
+
+- name: dim_products
+  description: Product dimension used to analyze catalog performance and item-level sales.
+  config:
+    tags:
+    - marts
+    - products
+  columns:
+  - name: product_id
+    data_tests:
+    - not_null
+    - unique
+  - name: product_name
+    data_tests:
+    - not_null
+  - name: category
+    data_tests:
+    - not_null
+  - name: unit_price
+    data_tests:
+    - not_null
+  - name: is_active
+    data_tests:
+    - not_null
+  - name: deleted_at
+    description: Soft deletion timestamp carried from the OLTP product record.
+
+- name: dim_salespeople
+  description: Salesperson dimension used for revenue attribution and regional performance.
+  config:
+    tags:
+    - marts
+    - sales
+  columns:
+  - name: salesperson_id
+    data_tests:
+    - not_null
+    - unique
+  - name: salesperson_name
+    data_tests:
+    - not_null
+  - name: region
+    data_tests:
+    - not_null
+  - name: email
+    data_tests:
+    - not_null
+    - unique
+  - name: deleted_at
+    description: Soft deletion timestamp carried from the OLTP salesperson record.
+
+- name: fct_order_items
+  description: >
+    Atomic sales line-item fact table. Grain: one row per order item.
+  config:
+    tags:
+    - marts
+    - sales
+  columns:
+  - name: order_item_id
+    data_tests:
+    - not_null
+    - unique
+  - name: order_id
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('fct_orders')
+          field: order_id
+  - name: product_id
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_products')
+          field: product_id
+  - name: quantity
+    data_tests:
+    - not_null
+  - name: unit_price
+    data_tests:
+    - not_null
+  - name: amount
+    data_tests:
+    - not_null
+  - name: created_at
+    data_tests:
+    - not_null
+  - name: updated_at
+    data_tests:
+    - not_null
+  - name: deleted_at
+    description: Soft deletion timestamp carried from the OLTP order item record.
+
+- name: mart_sales_by_salesperson
+  description: Sales summary grouped by salesperson, region and order volume.
+  config:
+    tags:
+    - marts
+    - sales
+  columns:
+  - name: salesperson_id
+    data_tests:
+    - not_null
+    - unique
+  - name: salesperson_name
+    data_tests:
+    - not_null
+  - name: region
+    data_tests:
+    - not_null
+  - name: total_orders
     data_tests:
     - not_null
   - name: revenue
