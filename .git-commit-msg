@@ -1,0 +1,11 @@
+enhance: observe.py with real data diffs instead of aggregations
+
+- Added MUTATION_QUERIES dict mapping each mutation to affected table queries
+- Implemented observe_affected_data() to display actual row data with formatting
+- Fixed search_path in apply_mutation() to handle unqualified table references
+- Refined queries for soft-delete to show deleted_at timestamps correctly
+- Updated OBSERVER.md with new output format and comprehensive examples
+- Tested with insert-customer, soft-delete-order, bug-negative-amount mutations
+
+Now shows exact changed rows, not aggregated counts: before/after row diffs
+with column names and values for each affected table.

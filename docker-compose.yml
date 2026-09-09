@@ -18,7 +18,7 @@ services:
 
   api:
     build:
-      context: ./api
+      context: ./app
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
@@ -30,7 +30,7 @@ services:
 
   mcp:
     build:
-      context: ./api
+      context: ./app
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
