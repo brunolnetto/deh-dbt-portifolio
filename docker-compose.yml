@@ -15,3 +15,28 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - ./oltp/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  api:
+    build:
+      context: ./api
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  mcp:
+    build:
+      context: ./api
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    stdin_open: true
+    tty: true
+    command: ["python", "-m", "ecommerce_api.mcp_server"]
+    depends_on:
+      - postgres

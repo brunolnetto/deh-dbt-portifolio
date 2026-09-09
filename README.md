@@ -162,7 +162,9 @@ dim_customers
 │   │   │   └── mart_customer_sales.sql
 │   │   │
 │   │   └── semantic/
-│   │       └── semantic_orders.yml   # MetricFlow metrics
+│   │       ├── semantic_orders.yml      # Pedido: pedidos, receita, reembolso
+│   │       ├── semantic_products.yml    # Produto: itens, receita por item, preço médio
+│   │       └── semantic_salespeople.yml # Vendedor: pedidos e receita por vendedor
 │   │
 │   ├── analyses/
 │   └── README.md
@@ -465,7 +467,13 @@ dbt ls --selector orders_pipeline  # DAG completo de fct_orders
 
 ## Semantic Models e Métricas
 
-O projeto inclui definição de métricas via MetricFlow (v0.212.0):
+O projeto inclui três modelos semânticos separados, todos compatíveis com MetricFlow (v0.212.0):
+
+* `orders`: pedidos, receita, GMV, taxa de reembolso e proporções por pedido;
+* `products`: itens vendidos, receita por item e preço médio unitário;
+* `salespeople`: pedidos e receita por vendedor.
+
+### `orders`
 
 ```yaml
 semantic_models:
@@ -478,41 +486,60 @@ semantic_models:
       - name: customer
         type: foreign
         expr: customer_id
+      - name: salesperson
+        type: foreign
+        expr: salesperson_id
     dimensions:
       - name: order_date
         type: time
         time_granularity: day
       - name: status
         type: categorical
-    measures:
-      - name: order_count
-        agg: count_distinct
-        expr: order_id
-      - name: paid_order_count
-        agg: sum
-        expr: is_paid
-      - name: recognized_revenue
-        agg: sum
-        expr: recognized_revenue
-
-metrics:
-  - name: revenue
-    type: simple
-    expr: {{ Measure('recognized_revenue') }}
-  
-  - name: paid_orders
-    type: simple
-    expr: {{ Measure('paid_order_count') }}
-  
-  - name: average_order_value
-    type: ratio
-    numerator:
-      name: total_revenue
-      expr: {{ Measure('recognized_revenue') }}
-    denominator:
-      name: order_count
-      expr: {{ Measure('order_count') }}
 ```
+
+### `products`
+
+```yaml
+semantic_models:
+  - name: products
+    model: ref('fct_order_items')
+    entities:
+      - name: order_item
+        type: primary
+        expr: order_item_id
+      - name: product
+        type: foreign
+        expr: product_id
+    dimensions:
+      - name: created_at
+        type: time
+        time_granularity: day
+```
+
+### `salespeople`
+
+```yaml
+semantic_models:
+  - name: salespeople
+    model: ref('fct_orders')
+    entities:
+      - name: salesperson
+        type: primary
+        expr: salesperson_id
+      - name: order
+        type: foreign
+        expr: order_id
+    dimensions:
+      - name: order_date
+        type: time
+        time_granularity: day
+```
+
+As métricas expostas no projeto agora incluem:
+
+* pedidos: `orders`, `order_count`, `purchasers`, `revenue`, `gross_merchandise_value`, `paid_orders`, `refunded_orders`, `refund_amount`, `average_order_value`, `refund_rate`, `refund_amount_ratio`;
+* produto: `items_sold`, `product_revenue`, `average_unit_price`;
+* vendedor: `salesperson_orders`, `salesperson_paid_orders`, `salesperson_refunded_orders`, `salesperson_revenue`, `salesperson_gmv`, `salesperson_average_order_value`, `salesperson_refund_rate`.
 
 ---
 
@@ -1532,3 +1559,119 @@ Além de compreender:
 - Tradeoffs de merge vs outros strategies
 - Validação com contracts
 - Seleção de recursos com tags/selectors
+
+---
+
+## Demonstração de Workflows de Produção
+
+Para ver todos os 4 padrões de produção em ação, execute:
+
+
+╔═══════════════════════════════════════════════════════════════╗
+║       PRODUCTION DATA WORKFLOWS DEMONSTRATION                 ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📊 BASELINE STATE - Before workflows
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OLTP Tables (raw data):
+
+1️⃣  SOFT-DELETE PATTERN
+━━━━━━━━━━━━━━━━━━━━━━━
+
+  → Insert order...
+  → Soft-delete order...
+  → Order state (marked with deleted_at):
+
+2️⃣  INCREMENTAL MODEL UPDATES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  → Insert 4 new orders + 1 update + 1 late-arriving...
+  → Recent orders (ready for incremental):
+
+3️⃣  SNAPSHOT (SCD TYPE 2) TRACKING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  → Insert customer...
+Created customer 9
+  → Update customer country 2x (for snapshot history)...
+  → Current customer state:
+
+4️⃣  DATA QUALITY ISSUES (for dbt tests)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  → Injecting bugs (invalid country, negative amount, future date...):
+BUG injected: customer 10 has unknown country_code='XX'
+  ✓ 4 data quality issues injected
+
+⚙️  RUNNING DBT BUILD (processing all changes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Build finished with 5 expected test failures (data quality detection)
+
+📈 RESULTS - Analytics Layer After dbt Build
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Fact Table: fct_orders
+  Summary:
+ total_rows | soft_deleted | active | total_amount 
+------------+--------------+--------+--------------
+          9 |            0 |      9 |      1263.95
+
+  Sample data (recent orders):
+ order_id | customer_id | amount |  status   | state  
+----------+-------------+--------+-----------+--------
+       10 |           8 | 199.90 | paid      | active
+        9 |           7 |  42.75 | cancelled | active
+        8 |           6 | 150.00 | paid      | active
+        7 |           2 |  75.50 | paid      | active
+        6 |           5 | 310.40 | paid      | active
+(5 rows)
+
+Dimension Table: dim_customers
+  Summary:
+ total_customers | unique_country_codes 
+-----------------+----------------------
+               7 |                    3
+(1 row)
+
+
+  Sample data (top 5 customers):
+ customer_id | customer_name  | country_code | country_name 
+-------------+----------------+--------------+--------------
+           8 | Helena Martins | BR           | Brazil
+           2 | Bruno Costa    | BR           | Brazil
+           1 | Ana Silva      | BR           | Brazil
+           5 | Emma Fischer   | DE           | Germany
+           3 | Carla Mendes   | DE           | Germany
+(5 rows)
+
+
+Snapshot: customers_snapshot (SCD Type 2)
+  Summary:
+  (Snapshot data pending...)
+
+  Sample history (dimension changes - recent customers):
+  (Snapshot being built...)
+
+╔═══════════════════════════════════════════════════════════════╗
+║                  ✓ DEMONSTRATION COMPLETE                     ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Patterns Demonstrated:
+  ✓ Soft-Delete: Orders retained in warehouse with deletion flag
+  ✓ Incremental: Only changed rows processed (efficient)
+  ✓ Snapshot: Complete dimension change history (SCD Type 2)
+  ✓ Data Quality: dbt tests caught injected bad data
+
+Este script automaticamente:
+1. **Soft-Delete Pattern** - Insere ordem, soft-deleta, mostra 
+2. **Incremental Updates** - Insere 4 ordens, atualiza 1, cria late-arriving
+3. **Snapshot (SCD Type 2)** - Cria cliente, rastreia 3 mudanças de país
+4. **Data Quality** - Injeta 5 tipos de problemas de dados
+5. **dbt build** - Executa 89 testes, detecta os erros injetados
+6. **Verificação** - Mostra resultados em todas os modelos analíticos
+
+Resultado esperado: dbt detecta 4 erros (invalid country, negative amount, future orders).
+
+Veja [WORKFLOWS.md](WORKFLOWS.md) para detalhes completos dos padrões.
