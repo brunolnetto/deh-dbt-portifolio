@@ -1,0 +1,138 @@
+semantic_models:
+  - name: orders
+    description: >
+      Semantic model over the fct_orders fact table. Grain: one row per
+      order. Soft-deleted orders are included here; filtering is handled at query time
+      via the status or deleted_at dimension.
+
+    model: ref('fct_orders')
+    entities:
+      - name: order
+        type: primary
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+      - name: salesperson
+        type: foreign
+        expr: salesperson_id
+
+    dimensions:
+      - name: order_date
+        description: Date the order was placed. Use as the primary time axis.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        description: Operational order status (pending / paid / cancelled / refunded).
+        type: categorical
+
+    measures:
+      - name: order_count
+        description: Distinct count of orders.
+        agg: count_distinct
+        expr: order_id
+        agg_time_dimension: order_date
+      - name: purchaser_count
+        description: Distinct count of purchasing customers.
+        agg: count_distinct
+        expr: customer_id
+        agg_time_dimension: order_date
+      - name: paid_order_count
+        description: Number of paid orders (sum of is_paid flag).
+        agg: sum
+        expr: is_paid
+        agg_time_dimension: order_date
+      - name: refunded_order_count
+        description: Number of refunded orders (sum of is_refunded flag).
+        agg: sum
+        expr: is_refunded
+        agg_time_dimension: order_date
+      - name: recognized_revenue
+        description: Sum of recognized revenue across paid orders.
+        agg: sum
+        expr: recognized_revenue
+        agg_time_dimension: order_date
+      - name: gross_merchandise_value
+        description: Sum of gross order value across all orders.
+        agg: sum
+        expr: amount
+        agg_time_dimension: order_date
+      - name: refunded_amount
+        description: Sum of refunded amounts across refunded orders.
+        agg: sum
+        expr: refunded_amount
+        agg_time_dimension: order_date
+
+metrics:
+  - name: orders
+    description: Total number of orders.
+    type: simple
+    type_params:
+      measure: order_count
+
+  - name: order_count
+    description: Total number of orders.
+    type: simple
+    type_params:
+      measure: order_count
+
+  - name: purchasers
+    description: Total number of purchasing customers.
+    type: simple
+    type_params:
+      measure: purchaser_count
+
+  - name: revenue
+    description: Total recognized revenue from paid orders.
+    type: simple
+    type_params:
+      measure: recognized_revenue
+
+  - name: gross_merchandise_value
+    description: Total gross order value across all orders.
+    type: simple
+    type_params:
+      measure: gross_merchandise_value
+
+  - name: paid_orders
+    description: Total number of paid orders.
+    type: simple
+    type_params:
+      measure: paid_order_count
+
+  - name: refunded_orders
+    description: Total number of refunded orders.
+    type: simple
+    type_params:
+      measure: refunded_order_count
+
+  - name: refund_amount
+    description: Total refunded amount.
+    type: simple
+    type_params:
+      measure: refunded_amount
+
+  - name: average_order_value
+    description: Gross merchandise value per order.
+    type: ratio
+    numerator:
+      name: gross_merchandise_value
+    denominator:
+      name: orders
+
+  - name: refund_rate
+    description: Proportion of orders that were refunded, by count.
+    type: ratio
+    numerator:
+      name: refunded_orders
+    denominator:
+      name: order_count
+
+  - name: refund_amount_ratio
+    description: Proportion of revenue that was refunded, by value.
+    type: ratio
+    numerator:
+      name: refund_amount
+    denominator:
+      name: revenue

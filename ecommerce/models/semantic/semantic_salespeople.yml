@@ -1,0 +1,101 @@
+semantic_models:
+  - name: salespeople
+    description: >
+      Semantic model for salesperson performance using the fct_orders fact table.
+      The grain remains one row per order, with salesperson as the foreign entity.
+
+    model: ref('fct_orders')
+    entities:
+      - name: salesperson
+        type: primary
+        expr: salesperson_id
+      - name: order
+        type: foreign
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_id
+
+    dimensions:
+      - name: order_date
+        description: Date the order was placed.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: status
+        description: Operational order status (pending / paid / cancelled / refunded).
+        type: categorical
+
+    measures:
+      - name: salesperson_order_count
+        description: Distinct count of orders.
+        agg: count_distinct
+        expr: order_id
+        agg_time_dimension: order_date
+      - name: salesperson_paid_order_count
+        description: Number of paid orders.
+        agg: sum
+        expr: is_paid
+        agg_time_dimension: order_date
+      - name: salesperson_refunded_order_count
+        description: Number of refunded orders.
+        agg: sum
+        expr: is_refunded
+        agg_time_dimension: order_date
+      - name: salesperson_recognized_revenue
+        description: Sum of recognized revenue across paid orders.
+        agg: sum
+        expr: recognized_revenue
+        agg_time_dimension: order_date
+      - name: salesperson_gross_merchandise_value
+        description: Sum of gross order value across all orders.
+        agg: sum
+        expr: amount
+        agg_time_dimension: order_date
+
+metrics:
+  - name: salesperson_orders
+    description: Total number of orders handled by the salesperson.
+    type: simple
+    type_params:
+      measure: salesperson_order_count
+
+  - name: salesperson_paid_orders
+    description: Total number of paid orders handled by the salesperson.
+    type: simple
+    type_params:
+      measure: salesperson_paid_order_count
+
+  - name: salesperson_revenue
+    description: Total recognized revenue handled by the salesperson.
+    type: simple
+    type_params:
+      measure: salesperson_recognized_revenue
+
+  - name: salesperson_gmv
+    description: Gross merchandise value handled by the salesperson.
+    type: simple
+    type_params:
+      measure: salesperson_gross_merchandise_value
+
+  - name: salesperson_average_order_value
+    description: Gross merchandise value per order handled by the salesperson.
+    type: ratio
+    numerator:
+      name: salesperson_gmv
+    denominator:
+      name: salesperson_orders
+
+  - name: salesperson_refund_rate
+    description: Proportion of orders handled by the salesperson that were refunded.
+    type: ratio
+    numerator:
+      name: salesperson_refunded_orders
+    denominator:
+      name: salesperson_orders
+
+  - name: salesperson_refunded_orders
+    description: Total number of refunded orders handled by the salesperson.
+    type: simple
+    type_params:
+      measure: salesperson_refunded_order_count

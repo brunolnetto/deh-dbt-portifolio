@@ -1,0 +1,65 @@
+semantic_models:
+  - name: products
+    description: >
+      Semantic model for product performance using the fct_order_items fact table.
+      Grain is one row per order item, with product as the foreign entity.
+
+    model: ref('fct_order_items')
+    entities:
+      - name: order_item
+        type: primary
+        expr: order_item_id
+      - name: order
+        type: foreign
+        expr: order_id
+      - name: product
+        type: foreign
+        expr: product_id
+
+    dimensions:
+      - name: created_at
+        description: Timestamp when the item was recorded.
+        type: time
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: order_item_count
+        description: Distinct count of order items.
+        agg: count_distinct
+        expr: order_item_id
+        agg_time_dimension: created_at
+      - name: total_units_sold
+        description: Total quantity sold across all order items.
+        agg: sum
+        expr: quantity
+        agg_time_dimension: created_at
+      - name: item_revenue
+        description: Total revenue across order items.
+        agg: sum
+        expr: amount
+        agg_time_dimension: created_at
+      - name: average_unit_price
+        description: Average unit price across order items.
+        agg: average
+        expr: unit_price
+        agg_time_dimension: created_at
+
+metrics:
+  - name: items_sold
+    description: Total units sold across order items.
+    type: simple
+    type_params:
+      measure: total_units_sold
+
+  - name: product_revenue
+    description: Total revenue across order items.
+    type: simple
+    type_params:
+      measure: item_revenue
+
+  - name: average_unit_price
+    description: Average unit price across sold items.
+    type: simple
+    type_params:
+      measure: average_unit_price
