@@ -46,6 +46,40 @@ def _random_order_id(cur):
     return row[0] if row else None
 
 
+def _random_active_order_id(cur):
+    """Random active order only if at least one non-deleted order exists."""
+    cur.execute(
+        "select order_id from orders where deleted_at is null order by random() limit 1"
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def _random_deleted_order_id(cur):
+    """Random deleted order only if at least one soft-deleted order exists."""
+    cur.execute(
+        "select order_id from orders where deleted_at is not null order by random() limit 1"
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def _random_customer_with_orders_id(cur):
+    """Random customer that has at least one order."""
+    cur.execute(
+        """
+        select c.customer_id
+        from customers c
+        join orders o on o.customer_id = c.customer_id
+        group by c.customer_id
+        order by random()
+        limit 1
+        """
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 # Valid values used by the "normal" (non-buggy) mutations.
 VALID_COUNTRY_CODES = ["BR", "DE", "US"]
 VALID_ORDER_STATUSES = ["pending", "paid", "cancelled", "refunded"]
@@ -68,7 +102,7 @@ def insert_customer(conn):
     with conn.cursor() as cur:
         cur.execute(
             """
-            insert into customers (
+            insert into shop.customers (
                 name,
                 email,
                 country_code
@@ -86,11 +120,13 @@ def insert_customer(conn):
         customer_id = cur.fetchone()[0]
 
     print(f"Created customer {customer_id}")
+    return {"customer_id": customer_id}
 
 
-def insert_order(conn):
+def insert_order(conn, customer_id=None):
     with conn.cursor() as cur:
-        customer_id = _random_customer_id(cur)
+        if customer_id is None:
+            customer_id = _random_customer_id(cur)
 
         if customer_id is None:
             print("No customer found, skipping insert_order")
@@ -100,7 +136,7 @@ def insert_order(conn):
 
         cur.execute(
             """
-            insert into orders (
+            insert into shop.orders (
                 customer_id,
                 amount,
                 status
@@ -117,11 +153,13 @@ def insert_order(conn):
         f"Created order {order_id} for customer {customer_id} "
         f"with amount={amount}"
     )
+    return {"order_id": order_id, "customer_id": customer_id}
 
 
-def update_customer(conn):
+def update_customer(conn, customer_id=None):
     with conn.cursor() as cur:
-        customer_id = _random_customer_id(cur)
+        if customer_id is None:
+            customer_id = _random_customer_id(cur)
 
         if customer_id is None:
             print("No customer found, skipping update_customer")
@@ -154,11 +192,17 @@ def update_customer(conn):
         f"Customer {customer_id} moved from "
         f"{current_country} to {new_country}"
     )
+    return {
+        "customer_id": customer_id,
+        "old_country_code": current_country,
+        "new_country_code": new_country,
+    }
 
 
-def update_order(conn):
+def update_order(conn, order_id=None):
     with conn.cursor() as cur:
-        order_id = _random_order_id(cur)
+        if order_id is None:
+            order_id = _random_order_id(cur)
 
         if order_id is None:
             print("No order found, skipping update_order")
@@ -191,54 +235,73 @@ def update_order(conn):
         f"Order {order_id} changed from "
         f"{current_status} to {new_status}"
     )
+    return {
+        "order_id": order_id,
+        "old_status": current_status,
+        "new_status": new_status,
+    }
 
 
-def delete_order(conn):
+def delete_order(conn, order_id=None):
     with conn.cursor() as cur:
+        if order_id is None:
+            cur.execute(
+                """
+                select order_id
+                from orders
+                order by order_id desc
+                limit 1
+                """
+            )
+            row = cur.fetchone()
+            if not row:
+                print("No order found")
+                return None
+            order_id = row[0]
+
         cur.execute(
             """
             delete from orders
-            where order_id = (
-                select max(order_id)
-                from orders
-            )
+            where order_id = %s
             returning order_id
-            """
+            """,
+            (order_id,),
         )
 
         row = cur.fetchone()
 
     if row:
         print(f"Deleted order {row[0]}")
+        return {"order_id": row[0]}
     else:
         print("No order found")
+        return None
 
 
-def delete_customer_cascade(conn):
+def delete_customer_cascade(conn, customer_id=None):
     """
     Deletes a random customer that has at least one order, removing
     their orders first since orders.customer_id has no ON DELETE
     CASCADE in the schema. Simulates a churn / GDPR-style delete.
     """
     with conn.cursor() as cur:
+        if customer_id is None:
+            customer_id = _random_customer_with_orders_id(cur)
+
+        if customer_id is None:
+            print("No customer with orders found")
+            return None
+
         cur.execute(
             """
-            select c.customer_id
-            from customers c
-            join orders o on o.customer_id = c.customer_id
-            group by c.customer_id
-            order by random()
-            limit 1
-            """
+            select order_id
+            from orders
+            where customer_id = %s
+            order by order_id
+            """,
+            (customer_id,),
         )
-
-        row = cur.fetchone()
-
-        if not row:
-            print("No customer with orders found")
-            return
-
-        customer_id = row[0]
+        deleted_order_ids = [row[0] for row in cur.fetchall()]
 
         cur.execute(
             "delete from orders where customer_id = %s",
@@ -255,25 +318,30 @@ def delete_customer_cascade(conn):
         f"Deleted customer {customer_id} "
         f"and {deleted_orders} associated order(s)"
     )
+    return {
+        "customer_id": customer_id,
+        "deleted_orders": deleted_orders,
+        "deleted_order_ids": deleted_order_ids,
+    }
 
-def backdate_update(conn):
+def backdate_update(conn, order_id=None):
     stale_date = datetime.now() - timedelta(days=7)
 
     with conn.cursor() as cur:
+        if order_id is None:
+            order_id = _random_active_order_id(cur)
+        if order_id is None:
+            print("No active order found")
+            return None
+
         cur.execute(
             """
             update orders
             set updated_at = %s
-            where order_id = (
-                select order_id
-                from orders
-                where deleted_at is null
-                order by order_id
-                limit 1
-            )
+            where order_id = %s
             returning order_id
             """,
-            (stale_date,),
+            (stale_date, order_id),
         )
         row = cur.fetchone()
 
@@ -283,61 +351,80 @@ def backdate_update(conn):
             f"updated_at set to {stale_date.date()} "
             "(will be missed by naive updated_at > max predicate)"
         )
+        return {"order_id": row[0], "backdated_to": stale_date}
     else:
         print("No active order found")
+        return None
 
 
-def soft_delete_order(conn):
+def soft_delete_order(conn, order_id=None):
     with conn.cursor() as cur:
+        if order_id is None:
+            order_id = _random_active_order_id(cur)
+        if order_id is None:
+            print("No active order found, skipping soft_delete_order")
+            return None
+
         cur.execute(
             """
             update orders
             set
                 deleted_at = now(),
                 updated_at = now()
-            where order_id = (
-                select max(order_id)
-                from orders
-                where deleted_at is null
-            )
+            where order_id = %s
             returning order_id
-            """
+            """,
+            (order_id,),
         )
 
         row = cur.fetchone()
 
     if row:
         print(f"Soft deleted order {row[0]}")
+        return {"order_id": row[0]}
+    return None
 
-def restore_order(conn):
+
+def restore_order(conn, order_id=None):
     with conn.cursor() as cur:
+        if order_id is None:
+            order_id = _random_deleted_order_id(cur)
+        if order_id is None:
+            print("No deleted order found, skipping restore_order")
+            return None
+
         cur.execute(
             """
             update orders
             set
                 deleted_at = null,
                 updated_at = now()
-            where order_id = (
-                select max(order_id)
-                from orders
-                where deleted_at is not null
-            )
+            where order_id = %s
             returning order_id
-            """
+            """,
+            (order_id,),
         )
 
         row = cur.fetchone()
 
     if row:
         print(f"Restored order {row[0]}")
+        return {"order_id": row[0]}
+    return None
 
-def late_arriving_order(conn):
+def late_arriving_order(conn, customer_id=None):
     old_date = datetime.now() - timedelta(days=30)
 
     with conn.cursor() as cur:
+        if customer_id is None:
+            customer_id = _random_customer_id(cur)
+        if customer_id is None:
+            print("No customer found, skipping late_arriving_order")
+            return None
+
         cur.execute(
             """
-            insert into orders (
+            insert into shop.orders (
                 customer_id,
                 order_date,
                 amount,
@@ -349,7 +436,7 @@ def late_arriving_order(conn):
             returning order_id
             """,
             (
-                1,
+                customer_id,
                 old_date,
                 250.00,
                 "paid",
@@ -362,6 +449,11 @@ def late_arriving_order(conn):
         f"Created late-arriving order {order_id} "
         f"with order_date={old_date.date()}"
     )
+    return {
+        "order_id": order_id,
+        "customer_id": customer_id,
+        "order_date": old_date,
+    }
 
 # ---------------------------------------------------------------------------
 # Bad data mutations
@@ -376,7 +468,7 @@ def bug_invalid_country(conn):
     with conn.cursor() as cur:
         cur.execute(
             """
-            insert into customers (
+            insert into shop.customers (
                 name,
                 email,
                 country_code
@@ -410,7 +502,7 @@ def bug_negative_amount(conn):
 
         cur.execute(
             """
-            insert into orders (
+            insert into shop.orders (
                 customer_id,
                 amount,
                 status
@@ -435,7 +527,7 @@ def bug_zero_amount(conn):
 
         cur.execute(
             """
-            insert into orders (
+            insert into shop.orders (
                 customer_id,
                 amount,
                 status
@@ -462,7 +554,7 @@ def bug_future_order(conn):
 
         cur.execute(
             """
-            insert into orders (
+            insert into shop.orders (
                 customer_id,
                 order_date,
                 amount,
@@ -494,7 +586,7 @@ def bug_dirty_customer_name(conn):
     with conn.cursor() as cur:
         cur.execute(
             """
-            insert into customers (
+            insert into shop.customers (
                 name,
                 email,
                 country_code
@@ -544,7 +636,7 @@ def bug_duplicate_logical_email(conn):
 
         cur.execute(
             """
-            insert into customers (
+            insert into shop.customers (
                 name,
                 email,
                 country_code
@@ -616,11 +708,98 @@ BUG_ACTIONS = [
 ]
 
 
+PREREQUISITES = {
+    "insert-customer": None,
+    "insert-order": "insert-customer",
+    "update-customer": "insert-customer",
+    "update-order": "insert-order",
+    "delete-order": "insert-order",
+    "delete-customer-cascade": "insert-order",
+    "soft-delete-order": "insert-order",
+    "restore-order": "soft-delete-order",
+    "late-arriving-order": "insert-customer",
+    "backdate-update": "insert-order",
+}
+
+
+def _has_customers(conn):
+    with conn.cursor() as cur:
+        cur.execute("select 1 from shop.customers limit 1")
+        return cur.fetchone() is not None
+
+
+def _has_orders(conn):
+    with conn.cursor() as cur:
+        cur.execute("select 1 from shop.orders limit 1")
+        return cur.fetchone() is not None
+
+
+def _has_active_orders(conn):
+    with conn.cursor() as cur:
+        cur.execute("select 1 from shop.orders where deleted_at is null limit 1")
+        return cur.fetchone() is not None
+
+
+def _has_deleted_orders(conn):
+    with conn.cursor() as cur:
+        cur.execute("select 1 from shop.orders where deleted_at is not null limit 1")
+        return cur.fetchone() is not None
+
+
+def _has_customer_with_orders(conn):
+    with conn.cursor() as cur:
+        cur.execute(
+            "select 1 from shop.customers c join shop.orders o on o.customer_id = c.customer_id limit 1"
+        )
+        return cur.fetchone() is not None
+
+
+def _prerequisite_for(action_name):
+    return PREREQUISITES.get(action_name)
+
+
+def _can_run_action(conn, action_name):
+    prerequisite = _prerequisite_for(action_name)
+    if prerequisite is None:
+        return True
+
+    if prerequisite == "insert-customer":
+        return _has_customers(conn)
+    if prerequisite == "insert-order":
+        return _has_orders(conn)
+    if prerequisite == "soft-delete-order":
+        return _has_deleted_orders(conn) is False and _has_active_orders(conn)
+    return True
+
+
+def _eligible_actions(conn, actions):
+    eligible = []
+    for action in actions:
+        name = action.__name__.replace("_", "-")
+        if name in {"soft-delete-order", "restore-order", "update-order", "delete-order", "delete-customer-cascade", "backdate-update"}:
+            if name == "restore-order" and not _has_deleted_orders(conn):
+                continue
+            if name == "soft-delete-order" and not _has_active_orders(conn):
+                continue
+            if name in {"update-order", "delete-order", "delete-customer-cascade", "backdate-update"} and not _has_orders(conn):
+                continue
+            if name == "delete-customer-cascade" and not _has_customer_with_orders(conn):
+                continue
+        elif name in {"insert-order", "update-customer", "late-arriving-order"}:
+            if not _has_customers(conn):
+                continue
+        eligible.append(action)
+    return eligible
+
+
 def simulate(conn):
-    action = random.choice(NORMAL_ACTIONS)
+    eligible = _eligible_actions(conn, NORMAL_ACTIONS)
+    if not eligible:
+        print("No mutation is currently available. Run 'insert-customer' first.")
+        return
 
+    action = random.choice(eligible)
     print(f"Executing: {action.__name__}")
-
     action(conn)
 
 
