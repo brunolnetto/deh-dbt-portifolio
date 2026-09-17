@@ -82,3 +82,19 @@ jobs:
         working-directory: ecommerce
         run: uv run dbt build --select tag:rede_social
 
+      - name: dbt build — system
+        working-directory: ecommerce
+        run: uv run dbt build --select tag:system
+
+      # Quality Gates — Run after dbt build populates landing tables
+      - name: Install quality dependencies
+        run: cd quality && pip install -e . -q
+
+      - name: pytest — Landing table quality checks
+        run: cd quality && python -m pytest tests/test_pipeline.py -v
+
+      - name: Great Expectations — Column-level validations
+        run: cd quality && python -m pytest tests/test_ge_landing.py -v
+
+      - name: SODA Core — Landing table checks (varejo, biblioteca, rede_social)
+        run: cd quality && python -m pytest tests/test_soda_landing.py -v
