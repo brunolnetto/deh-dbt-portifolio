@@ -48,27 +48,27 @@ Este projeto demonstra padrões avançados de data engineering e analytics:
 
 ### 1. Start Infrastructure
 
-\\\ash
+```bash
 make up           # Spin up postgres + api + mutator
 sleep 5
 make dbt-seed     # Load seeds (estados_brasil.csv)
 make dbt-build    # Build all 3 domain models
-\\\
+```
 
 ### 2. Verify API
 
-\\\ash
+```bash
 # REST Endpoints
 curl http://localhost:8000/api/v1/varejo/dashboard
 curl http://localhost:8000/api/v1/biblioteca/dashboard
 curl http://localhost:8000/api/v1/rede_social/dashboard
-\\\
+```
 
 ### 3. Run Demo
 
-\\\ash
+```bash
 make demo         # Multi-domain demonstration with mutations
-\\\
+```
 
 ---
 
@@ -126,51 +126,57 @@ make demo         # Multi-domain demonstration with mutations
 ## 📦 Makefile Commands
 
 ### Infrastructure
-\\\ash
+
+```bash
 make up              # Start services
 make down            # Stop services
 make reset           # Full reset: down, up, seed, build
-\\\
+```
 
 ### dbt
-\\\ash
+
+```bash
 make dbt-seed        # Load seeds
 make dbt-build       # Build all models
 make dbt-test        # Run tests
 make dbt-snapshot    # Run snapshots
-\\\
+```
 
 ### Domain Builds (using generic target)
-\\\ash
+
+```bash
 make build-varejo
 make build-biblioteca
 make build-rede
-\\\
+```
 
 ### Mutations
-\\\ash
+
+```bash
 make mutate-varejo cmd=insert-venda
 make mutate-biblioteca cmd=return-livro
 make mutate-rede cmd=insert-leitura
-\\\
+```
 
 ### Observation & Pipelines
-\\\ash
+
+```bash
 make observe domain=varejo cmd=insert-venda
 make run-all         # Full pipeline
 make demo            # Comprehensive demo
-\\\
+```
 
 ---
 
 ## 🔄 OLTP Mutations
 
 ### CLI Interface
-\\\ash
+
+```bash
 python -m portfolio_api.cli varejo insert-venda
 python -m portfolio_api.cli biblioteca return-livro
 python -m portfolio_api.cli rede_social insert-leitura
-\\\
+```
 
 ### Sidecar Service
 Automatically runs with \docker compose up\ (MUTATE_INTERVAL=10s)
@@ -181,21 +187,22 @@ Automatically runs with \docker compose up\ (MUTATE_INTERVAL=10s)
 
 Snapshots OLTP+Analytics → Mutation → dbt rebuild → After snapshot
 
-\\\ash
+```bash
 make observe domain=varejo cmd=insert-venda
-\\\
+```
 
 ---
 
 ## 🚀 CI/CD Pipeline
 
 GitHub Actions validates each domain independently:
-\\\ash
+
+```bash
 dbt seed
 dbt build --select tag:varejo
 dbt build --select tag:biblioteca
 dbt build --select tag:rede_social
-\\\
+```
 
 ---
 
