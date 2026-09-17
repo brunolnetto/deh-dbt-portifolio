@@ -1,33 +1,39 @@
 #!/bin/bash
-# Reset database to clean state
+# Reset database to clean state — drops all 3 domain schemas + analytics
 set -euo pipefail
 
 export PGPASSWORD="${PGPASSWORD:-dbt}"
 HOST="${HOST:-localhost}"
-PORT="${PORT:-5435}"
+PORT="${PORT:-5437}"
 USER="${USER:-dbt}"
-DB="${DB:-shop}"
+DB="${DB:-portifolio}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$ROOT_DIR"
 
-echo "🔄 Resetting database..."
+echo "Resetting database ${DB}..."
 
-# Drop OLTP tables if they exist
-echo "Dropping OLTP tables..."
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP TABLE IF EXISTS shop.order_items CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP TABLE IF EXISTS shop.products CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP TABLE IF EXISTS shop.salespeople CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP TABLE IF EXISTS shop.orders CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP TABLE IF EXISTS shop.customers CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
+psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" <<'SQL'
+DROP SCHEMA IF EXISTS varejo      CASCADE;
+DROP SCHEMA IF EXISTS biblioteca  CASCADE;
+DROP SCHEMA IF EXISTS rede_social CASCADE;
+DROP SCHEMA IF EXISTS analytics   CASCADE;
+DROP SCHEMA IF EXISTS staging_varejo        CASCADE;
+DROP SCHEMA IF EXISTS staging_biblioteca    CASCADE;
+DROP SCHEMA IF EXISTS staging_rede_social   CASCADE;
+DROP SCHEMA IF EXISTS intermediate_varejo   CASCADE;
+DROP SCHEMA IF EXISTS intermediate_biblioteca  CASCADE;
+DROP SCHEMA IF EXISTS intermediate_rede_social CASCADE;
+DROP SCHEMA IF EXISTS analytics_varejo      CASCADE;
+DROP SCHEMA IF EXISTS analytics_biblioteca  CASCADE;
+DROP SCHEMA IF EXISTS analytics_rede_social CASCADE;
+SQL
 
-# Drop dbt-generated tables/views in shop and analytics
-echo "Dropping dbt artifacts..."
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP SCHEMA IF EXISTS analytics CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
-psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "DROP SCHEMA IF EXISTS shop CASCADE;" 2>&1 | grep -E 'DROP|ERROR' || true
+echo "Re-seeding OLTP..."
+psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -f oltp/init.sql
 
-# Create fresh schemas
-echo "Creating schemas..."
+echo "  Done. Run 'make dbt-seed dbt-build' to rebuild analytics."
+
 psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "CREATE SCHEMA IF NOT EXISTS shop;" 2>&1 | grep -E 'CREATE|ERROR' || true
 psql -h "$HOST" -p "$PORT" -U "$USER" -d "$DB" -c "CREATE SCHEMA IF NOT EXISTS analytics;" 2>&1 | grep -E 'CREATE|ERROR' || true
 
