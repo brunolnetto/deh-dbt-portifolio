@@ -5,10 +5,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     postgres_host: str = "localhost"
-    postgres_port: int = 5435
+    postgres_port: int = 5437
     postgres_user: str = "dbt"
     postgres_password: str = "dbt"
-    postgres_db: str = "shop"
+    postgres_db: str = "portifolio"
 
     @property
     def db_dsn(self) -> str:

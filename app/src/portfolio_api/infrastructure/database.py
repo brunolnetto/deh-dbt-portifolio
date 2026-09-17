@@ -4,7 +4,7 @@ _pool: AsyncConnectionPool | None = None
 
 
 def get_pool() -> AsyncConnectionPool:
-    assert _pool is not None, "DB pool not initialized; ensure lifespan ran."
+    assert _pool is not None, "DB pool not initialized."
     return _pool
 
 
