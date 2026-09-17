@@ -88,7 +88,7 @@ jobs:
 
       # Quality Gates — Run after dbt build populates landing tables
       - name: Install quality dependencies
-        run: cd quality && pip install -e . -q
+        run: pip install great-expectations soda-core-postgres pytest psycopg pandas sqlalchemy python-dotenv -q
 
       - name: pytest — Landing table quality checks
         run: cd quality && python -m pytest tests/test_pipeline.py -v
