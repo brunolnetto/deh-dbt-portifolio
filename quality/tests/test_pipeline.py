@@ -10,7 +10,7 @@ _TABLES: list[tuple[str, str, str]] = [
     ("landing_biblioteca", "livros", "livro_id"),
     ("landing_biblioteca", "emprestimos", "emprestimo_id"),
     ("landing_biblioteca", "autores", "autor_id"),
-    ("landing_biblioteca", "multas", "emprestimo_id"),
+    ("landing_biblioteca", "multas", "multa_id"),
     ("landing_rede_social", "pessoas", "pessoa_id"),
     ("landing_rede_social", "leituras", "leitura_id"),
     ("landing_rede_social", "conexoes", "conexao_id"),
