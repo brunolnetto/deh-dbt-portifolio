@@ -1,6 +1,6 @@
 snapshots:
   - name: clientes_snapshot
-    relation: source('varejo', 'origem_cliente')
+    relation: source('landing_varejo', 'clientes')
     config:
       unique_key: cliente_id
       strategy: timestamp
