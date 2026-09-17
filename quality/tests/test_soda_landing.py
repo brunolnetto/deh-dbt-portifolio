@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from conftest import SODA_CHECKS_DIR, SODA_CONFIG
+from .conftest import SODA_CHECKS_DIR, SODA_CONFIG
 
 
 def _scan(checks_file: str) -> None:

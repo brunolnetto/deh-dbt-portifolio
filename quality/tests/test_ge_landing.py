@@ -7,7 +7,7 @@ import pandas as pd
 import psycopg
 import pytest
 
-from conftest import POSTGRES_DSN
+from .conftest import POSTGRES_DSN
 
 
 def _load(schema: str, table: str) -> pd.DataFrame:
