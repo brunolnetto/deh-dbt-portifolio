@@ -72,7 +72,8 @@ sources:
             data_tests:
               - not_null
               - accepted_values:
-                  values: ['aluno', 'professor']
+                  arguments:
+                    values: ['aluno', 'professor']
 
       - name: emprestimo
         columns:

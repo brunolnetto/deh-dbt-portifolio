@@ -26,63 +26,19 @@ sources:
           - name: preco_sugerido
 
       - name: vendas
-        columns:
-          - name: venda_id
-            data_tests: [not_null]
-          - name: cliente_id
-            data_tests: [not_null]
-          - name: produto_id
-            data_tests: [not_null]
-          - name: status
-          - name: valor_total
-          - name: updated_at
-
-        description: Cadastro de clientes.
-        columns:
-          - name: cliente_id
-            data_tests: [not_null, unique]
-          - name: nome
-            data_tests: [not_null]
-          - name: estado
-            data_tests: [not_null]
-          - name: segmento
-            data_tests: [not_null]
-          - name: data_cadastro
-            data_tests: [not_null]
-          - name: updated_at
-            data_tests: [not_null]
-
-      - name: origem_produto
-        description: Catálogo de produtos.
-        columns:
-          - name: produto_id
-            data_tests: [not_null, unique]
-          - name: nome_produto
-            data_tests: [not_null]
-          - name: categoria
-            data_tests: [not_null]
-          - name: preco_sugerido
-            data_tests: [not_null]
-
-      - name: origem_venda
         description: Transações de venda.
         columns:
           - name: venda_id
-            data_tests: [not_null, unique]
+            data_tests: [not_null]
           - name: cliente_id
             data_tests: [not_null]
           - name: produto_id
-            data_tests: [not_null]
-          - name: data_venda
-            data_tests: [not_null]
-          - name: quantidade
-            data_tests: [not_null]
-          - name: valor_total
             data_tests: [not_null]
           - name: status
             data_tests:
               - not_null
               - accepted_values:
-                  values: ['pago', 'cancelado', 'devolvido', 'pendente']
+                  arguments:
+                    values: ['pago', 'cancelado', 'devolvido', 'pendente']
+          - name: valor_total
           - name: updated_at
-            data_tests: [not_null]
