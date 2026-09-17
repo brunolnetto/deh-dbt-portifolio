@@ -1,8 +1,5 @@
-select
-    product_id,
-    product_name,
-    category,
-    unit_price,
+{{ config(enabled=false) }}
+
     is_active,
     created_at,
     updated_at,

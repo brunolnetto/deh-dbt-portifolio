@@ -1,8 +1,5 @@
-{{ config(tags=['marts', 'finance']) }}
+{{ config(enabled=false) }}
 
-select
-    c.customer_id,
-    c.customer_name,
     c.email,
     c.country_code,
     c.country_name,

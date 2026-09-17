@@ -1,8 +1,5 @@
-{{ config(tags=['marts', 'sales']) }}
+{{ config(enabled=false) }}
 
-select
-    s.salesperson_id,
-    s.salesperson_name,
     s.region,
     coalesce(i.total_orders, 0) as total_orders,
     coalesce(i.revenue, 0) as revenue,

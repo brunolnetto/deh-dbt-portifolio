@@ -1,8 +1,5 @@
-select
-    salesperson_id,
-    salesperson_name,
-    email,
-    region,
+{{ config(enabled=false) }}
+
     created_at,
     updated_at,
     deleted_at

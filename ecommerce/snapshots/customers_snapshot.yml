@@ -1,24 +1,25 @@
 snapshots:
-  - name: customers_snapshot
-    relation: source('shop', 'customers')
+  - name: clientes_snapshot
+    relation: source('varejo', 'origem_cliente')
     config:
-      unique_key: customer_id
+      unique_key: cliente_id
       strategy: timestamp
       updated_at: updated_at
+      schema: analytics_varejo
     description: >
-      SCD Type 2 snapshot of customer records.
-      Captures historical state when attributes such as country_code change.
-      Teaching scenario: run dbt snapshot before and after update-customer to
-      observe dbt_valid_from / dbt_valid_to rows.
+      Snapshot SCD Tipo 2 dos clientes do varejo.
+      Captura histórico de mudanças em segmento e estado.
+      Cenário didático: execute dbt snapshot antes e após atualizar um cliente.
 
     columns:
-      - name: customer_id
-        description: Customer primary key.
+      - name: cliente_id
+        description: Chave primária do cliente.
       - name: dbt_scd_id
-        description: Surrogate key unique to each snapshot row.
+        description: Chave surrogate única por linha do snapshot.
       - name: dbt_updated_at
-        description: Timestamp when this snapshot row was last written.
+        description: Timestamp de escrita desta linha do snapshot.
       - name: dbt_valid_from
-        description: Start of the validity period for this version of the record.
+        description: Início do período de validade desta versão.
       - name: dbt_valid_to
-        description: End of the validity period. NULL = currently active version.
+        description: Fim do período de validade. NULL = versão ativa atual.
+

@@ -1,8 +1,5 @@
-{{ config(
-    materialized='incremental',
-    unique_key='order_item_id',
-    incremental_strategy='merge',
-    tags=['sales', 'incremental']
+{{ config(enabled=false) }}
+
 ) }}
 
 select
