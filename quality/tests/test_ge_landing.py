@@ -6,12 +6,6 @@ import great_expectations as gx
 import pandas as pd
 import psycopg
 import pytest
-from great_expectations.expectations import (
-    ExpectColumnValuesToBeBetween,
-    ExpectColumnValuesToBeUnique,
-    ExpectColumnValuesToNotBeNull,
-    ExpectTableRowCountToBeGreaterThan,
-)
 
 from conftest import POSTGRES_DSN
 
@@ -25,14 +19,30 @@ def _load(schema: str, table: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=cols)
 
 
-def _run_suite(df: pd.DataFrame, name: str, expectations: list[Any]) -> None:
+def _run_suite(df: pd.DataFrame, name: str, expectations: list[dict]) -> None:
+    """
+    Run a GE v1 ExpectationSuite on a DataFrame.
+    
+    Args:
+        df: DataFrame to validate
+        name: Suite name (used for context)
+        expectations: List of expectation dicts with 'type' and 'kwargs' keys
+            e.g., [
+                {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+                {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'cliente_id'}},
+            ]
+    """
     ctx = gx.get_context()
     ds = ctx.data_sources.add_pandas(name=f"ds_{name}")
     asset = ds.add_dataframe_asset(name=name)
     batch_def = asset.add_batch_definition_whole_dataframe("batch")
+    
     suite = ctx.suites.add(gx.ExpectationSuite(name=name))
     for exp in expectations:
-        suite.add_expectation(exp)
+        exp_type = exp['type']
+        exp_kwargs = exp.get('kwargs', {})
+        suite.add_expectation(gx.Expectation(type=exp_type, kwargs=exp_kwargs))
+    
     vdef = ctx.validation_definitions.add(
         gx.ValidationDefinition(name=name, data=batch_def, suite=suite)
     )
@@ -45,10 +55,10 @@ def test_ge_clientes():
         _load("landing_varejo", "clientes"),
         "clientes",
         [
-            ExpectTableRowCountToBeGreaterThan(value=0),
-            ExpectColumnValuesToNotBeNull(column="cliente_id"),
-            ExpectColumnValuesToBeUnique(column="cliente_id"),
-            ExpectColumnValuesToNotBeNull(column="nome"),
+            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'cliente_id'}},
+            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'cliente_id'}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'nome'}},
         ],
     )
 
@@ -58,10 +68,10 @@ def test_ge_produtos():
         _load("landing_varejo", "produtos"),
         "produtos",
         [
-            ExpectTableRowCountToBeGreaterThan(value=0),
-            ExpectColumnValuesToNotBeNull(column="produto_id"),
-            ExpectColumnValuesToBeUnique(column="produto_id"),
-            ExpectColumnValuesToBeBetween(column="preco_sugerido", min_value=0),
+            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'produto_id'}},
+            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'produto_id'}},
+            {'type': 'expect_column_values_to_be_between', 'kwargs': {'column': 'preco_sugerido', 'min_value': 0}},
         ],
     )
 
@@ -71,10 +81,10 @@ def test_ge_vendas():
         _load("landing_varejo", "vendas"),
         "vendas",
         [
-            ExpectTableRowCountToBeGreaterThan(value=0),
-            ExpectColumnValuesToNotBeNull(column="venda_id"),
-            ExpectColumnValuesToNotBeNull(column="cliente_id"),
-            ExpectColumnValuesToNotBeNull(column="produto_id"),
+            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'venda_id'}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'cliente_id'}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'produto_id'}},
         ],
     )
 
@@ -84,9 +94,9 @@ def test_ge_usuarios():
         _load("landing_biblioteca", "usuarios"),
         "usuarios",
         [
-            ExpectTableRowCountToBeGreaterThan(value=0),
-            ExpectColumnValuesToNotBeNull(column="usuario_id"),
-            ExpectColumnValuesToBeUnique(column="usuario_id"),
+            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'usuario_id'}},
+            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'usuario_id'}},
         ],
     )
 
@@ -96,10 +106,10 @@ def test_ge_emprestimos():
         _load("landing_biblioteca", "emprestimos"),
         "emprestimos",
         [
-            ExpectTableRowCountToBeGreaterThan(value=0),
-            ExpectColumnValuesToNotBeNull(column="emprestimo_id"),
-            ExpectColumnValuesToNotBeNull(column="usuario_id"),
-            ExpectColumnValuesToNotBeNull(column="livro_id"),
+            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'emprestimo_id'}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'usuario_id'}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'livro_id'}},
         ],
     )
 
@@ -109,8 +119,8 @@ def test_ge_pessoas():
         _load("landing_rede_social", "pessoas"),
         "pessoas",
         [
-            ExpectTableRowCountToBeGreaterThan(value=0),
-            ExpectColumnValuesToNotBeNull(column="pessoa_id"),
-            ExpectColumnValuesToBeUnique(column="pessoa_id"),
+            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
+            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'pessoa_id'}},
+            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'pessoa_id'}},
         ],
     )
