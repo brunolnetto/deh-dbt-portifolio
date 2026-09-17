@@ -15,11 +15,12 @@ def _scan(checks_file: str) -> None:
     scan.add_sodacl_yaml_file(checks_file)
     scan.execute()
 
+    # SODA Core v3 API: check exit_code (0 = all passed, non-zero = failed)
+    assert scan.exit_code == 0, f"SODA scan failed with exit code {scan.exit_code}. Check logs for details."
+    
+    # Also check for error logs as a safety net
     errors = scan.get_error_logs()
     assert not errors, f"SODA scan errors:\n" + "\n".join(str(e) for e in errors)
-
-    failed = [c for c in scan.get_checks() if str(c.outcome) == "fail"]
-    assert not failed, "SODA checks failed:\n" + "\n".join(str(c) for c in failed)
 
 
 def test_soda_varejo():
