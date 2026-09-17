@@ -1,16 +1,9 @@
 
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
-name: 'ecommerce'
+name: 'portfolio'
 version: '1.0.0'
 
-# This setting configures which "profile" dbt uses for this project.
-profile: 'ecommerce'
+profile: 'portfolio'
 
-# These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
-# found in the "models/" directory. You probably won't need to change these!
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
@@ -18,32 +11,50 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-clean-targets:         # directories to be removed by `dbt clean`
+clean-targets:
   - "target"
   - "dbt_packages"
 
-
-# Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
 models:
-  ecommerce:
+  portfolio:
     staging:
-      +schema: shop
+      +materialized: view
       +tags: [staging]
-      +materialized: view
+      varejo:
+        +schema: staging_varejo
+        +tags: [staging, varejo]
+      biblioteca:
+        +schema: staging_biblioteca
+        +tags: [staging, biblioteca]
+      rede_social:
+        +schema: staging_rede_social
+        +tags: [staging, rede_social]
     intermediate:
-      +schema: shop
-      +tags: [intermediate]
       +materialized: view
+      varejo:
+        +schema: intermediate_varejo
+        +tags: [intermediate, varejo]
+      biblioteca:
+        +schema: intermediate_biblioteca
+        +tags: [intermediate, biblioteca]
+      rede_social:
+        +schema: intermediate_rede_social
+        +tags: [intermediate, rede_social]
     mart:
-      +schema: analytics
       +materialized: table
-      +tags: [marts]
-      # fct_orders: incremental + contract requires on_schema_change to be explicit
-      fct_orders:
-        +on_schema_change: append_new_columns
-        +materialized: incremental
+      varejo:
+        +schema: analytics_varejo
+        +tags: [mart, varejo]
+        fct_vendas:
+          +on_schema_change: append_new_columns
+          +materialized: incremental
+      biblioteca:
+        +schema: analytics_biblioteca
+        +tags: [mart, biblioteca]
+        fct_emprestimos:
+          +on_schema_change: append_new_columns
+          +materialized: incremental
+      rede_social:
+        +schema: analytics_rede_social
+        +tags: [mart, rede_social]
+

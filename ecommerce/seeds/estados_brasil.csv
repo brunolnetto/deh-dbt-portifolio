@@ -1,0 +1,28 @@
+estado,nome_estado,regiao
+SP,São Paulo,Sudeste
+RJ,Rio de Janeiro,Sudeste
+MG,Minas Gerais,Sudeste
+ES,Espírito Santo,Sudeste
+PR,Paraná,Sul
+SC,Santa Catarina,Sul
+RS,Rio Grande do Sul,Sul
+BA,Bahia,Nordeste
+PE,Pernambuco,Nordeste
+CE,Ceará,Nordeste
+MA,Maranhão,Nordeste
+PB,Paraíba,Nordeste
+RN,Rio Grande do Norte,Nordeste
+AL,Alagoas,Nordeste
+SE,Sergipe,Nordeste
+PI,Piauí,Nordeste
+GO,Goiás,Centro-Oeste
+MT,Mato Grosso,Centro-Oeste
+MS,Mato Grosso do Sul,Centro-Oeste
+DF,Distrito Federal,Centro-Oeste
+AM,Amazonas,Norte
+PA,Pará,Norte
+RO,Rondônia,Norte
+AC,Acre,Norte
+AP,Amapá,Norte
+RR,Roraima,Norte
+TO,Tocantins,Norte
