@@ -4,6 +4,7 @@ Domains:
   - /api/v1/varejo       → retail analytics
   - /api/v1/biblioteca   → library analytics
   - /api/v1/rede_social  → social reading network analytics
+  - /api/v1/system       → request logs and API health
   - /mcp                 → MCP Streamable HTTP transport
 """
 
@@ -16,6 +17,7 @@ from .infrastructure.database import close_pool, init_pool
 from .presentation.api.varejo import router as varejo_router
 from .presentation.api.biblioteca import router as biblioteca_router
 from .presentation.api.rede_social import router as rede_social_router
+from .presentation.api.system import router as system_router
 from .presentation.mcp.tools import mcp
 
 
@@ -40,5 +42,6 @@ app = FastAPI(
 app.include_router(varejo_router,      prefix="/api/v1/varejo",      tags=["varejo"])
 app.include_router(biblioteca_router,  prefix="/api/v1/biblioteca",  tags=["biblioteca"])
 app.include_router(rede_social_router, prefix="/api/v1/rede_social", tags=["rede_social"])
+app.include_router(system_router,      prefix="/api/v1/system",      tags=["system"])
 
 app.mount("/mcp", mcp.streamable_http_app())

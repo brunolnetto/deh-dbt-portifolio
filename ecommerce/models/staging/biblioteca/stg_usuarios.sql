@@ -5,4 +5,4 @@ select
     lower(trim(email))                  as email,
     cast(updated_at as timestamp)       as updated_at
 
-from {{ source('biblioteca', 'usuario') }}
+from {{ source('landing_biblioteca', 'usuarios') }}

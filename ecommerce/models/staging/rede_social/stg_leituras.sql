@@ -5,4 +5,4 @@ select
     cast(data_leitura as date)          as read_date,
     cast(updated_at as timestamp)       as updated_at
 
-from {{ source('rede_social', 'leitura') }}
+from {{ source('landing_rede_social', 'leituras') }}

@@ -6,4 +6,4 @@ select
     quantidade_disponivel               as available_copies,
     cast(updated_at as timestamp)       as updated_at
 
-from {{ source('biblioteca', 'livro') }}
+from {{ source('landing_biblioteca', 'livros') }}

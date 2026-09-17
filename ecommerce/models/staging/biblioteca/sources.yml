@@ -1,6 +1,42 @@
 version: 2
 
 sources:
+  - name: landing_biblioteca
+    description: Landing layer populated by extractor from OLTP API.
+    schema: landing_biblioteca
+
+    tables:
+      - name: usuarios
+        columns:
+          - name: usuario_id
+            data_tests: [not_null]
+          - name: nome
+            data_tests: [not_null]
+          - name: tipo
+          - name: email
+
+      - name: livros
+        columns:
+          - name: livro_id
+            data_tests: [not_null]
+          - name: titulo
+            data_tests: [not_null]
+
+      - name: emprestimos
+        columns:
+          - name: emprestimo_id
+            data_tests: [not_null]
+
+      - name: autores
+        columns:
+          - name: autor_id
+            data_tests: [not_null]
+
+      - name: multas
+        columns:
+          - name: multa_id
+            data_tests: [not_null]
+
   - name: biblioteca
     description: Sistema de gerenciamento de acervo da biblioteca.
     schema: biblioteca

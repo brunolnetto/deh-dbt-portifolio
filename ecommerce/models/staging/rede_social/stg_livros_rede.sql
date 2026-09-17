@@ -6,4 +6,4 @@ select
     ano_publicacao                      as publication_year,
     cast(updated_at as timestamp)       as updated_at
 
-from {{ source('rede_social', 'livro') }}
+from {{ source('landing_rede_social', 'livros') }}

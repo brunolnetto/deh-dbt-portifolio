@@ -1,12 +1,42 @@
 version: 2
 
 sources:
-  - name: varejo
-    description: Sistema transacional de origem do varejo.
-    schema: varejo
+  - name: landing_varejo
+    description: Landing layer populated by extractor from OLTP API.
+    schema: landing_varejo
 
     tables:
-      - name: origem_cliente
+      - name: clientes
+        columns:
+          - name: cliente_id
+            data_tests: [not_null]
+          - name: nome
+            data_tests: [not_null]
+          - name: estado
+          - name: segmento
+          - name: data_cadastro
+          - name: updated_at
+
+      - name: produtos
+        columns:
+          - name: produto_id
+            data_tests: [not_null]
+          - name: nome_produto
+          - name: categoria
+          - name: preco_sugerido
+
+      - name: vendas
+        columns:
+          - name: venda_id
+            data_tests: [not_null]
+          - name: cliente_id
+            data_tests: [not_null]
+          - name: produto_id
+            data_tests: [not_null]
+          - name: status
+          - name: valor_total
+          - name: updated_at
+
         description: Cadastro de clientes.
         columns:
           - name: cliente_id

@@ -1,12 +1,18 @@
 [project]
-name = "portfolio-api"
-version = "1.0.0"
-description = "REST and MCP interface over the DEH Portfolio Analytics warehouse (varejo + biblioteca + rede_social)."
+name = "portfolio-services"
+version = "2.0.0"
+description = "DEH Portfolio: OLTP API, Extractor, Analytics API, and Mutator over 3 domains."
 requires-python = ">=3.13"
 dependencies = [
+    # OLTP API + Analytics API
+    "psycopg[pool,binary]>=3.2",
+    # Extractor
+    "httpx>=0.27",
+    "pyarrow>=18",
+    "boto3>=1.35",
+    # Shared
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
-    "psycopg[pool,binary]>=3.2",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "mcp>=1.3",
@@ -17,11 +23,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/portfolio_api"]
+packages = ["src/portfolio_api", "src/oltp_api", "src/extractor"]
 
 [tool.uv]
 dev-dependencies = [
-    "httpx>=0.27",
     "pytest>=8",
     "pytest-asyncio>=0.24",
 ]

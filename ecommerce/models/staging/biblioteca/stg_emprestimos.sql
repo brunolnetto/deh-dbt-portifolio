@@ -26,6 +26,6 @@ select
     coalesce(m.pago, false)                    as fine_paid,
     cast(e.updated_at as timestamp)            as updated_at
 
-from {{ source('biblioteca', 'emprestimo') }} e
-left join {{ source('biblioteca', 'multa') }} m
+from {{ source('landing_biblioteca', 'emprestimos') }} e
+left join {{ source('landing_biblioteca', 'multas') }} m
     on e.emprestimo_id = m.emprestimo_id

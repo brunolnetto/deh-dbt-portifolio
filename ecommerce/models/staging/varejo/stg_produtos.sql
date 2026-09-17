@@ -5,4 +5,4 @@ select
     cast(preco_sugerido as numeric(12, 2))  as suggested_price,
     cast(updated_at as timestamp)           as updated_at
 
-from {{ source('varejo', 'origem_produto') }}
+from {{ source('landing_varejo', 'produtos') }}

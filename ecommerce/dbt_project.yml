@@ -29,6 +29,9 @@ models:
       rede_social:
         +schema: staging_rede_social
         +tags: [staging, rede_social]
+      system:
+        +schema: staging_system
+        +tags: [staging, system]
     intermediate:
       +materialized: view
       varejo:
@@ -40,6 +43,9 @@ models:
       rede_social:
         +schema: intermediate_rede_social
         +tags: [intermediate, rede_social]
+      system:
+        +schema: intermediate_system
+        +tags: [intermediate, system]
     mart:
       +materialized: table
       varejo:
@@ -57,4 +63,7 @@ models:
       rede_social:
         +schema: analytics_rede_social
         +tags: [mart, rede_social]
+      system:
+        +schema: analytics_system
+        +tags: [mart, system]
 

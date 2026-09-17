@@ -3,4 +3,4 @@ select
     trim(nome)                          as genre_name,
     cast(updated_at as timestamp)       as updated_at
 
-from {{ source('rede_social', 'genero') }}
+from {{ source('landing_rede_social', 'generos') }}

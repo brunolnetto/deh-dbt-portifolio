@@ -1,6 +1,26 @@
 version: 2
 
 sources:
+  - name: landing_rede_social
+    description: Landing layer populated by extractor from OLTP API.
+    schema: landing_rede_social
+
+    tables:
+      - name: pessoas
+        columns:
+          - name: pessoa_id
+            data_tests: [not_null]
+      - name: leituras
+      - name: conexoes
+      - name: generos
+        columns:
+          - name: genero_id
+            data_tests: [not_null]
+      - name: livros
+        columns:
+          - name: livro_id
+            data_tests: [not_null]
+
   - name: rede_social
     description: Rede social de leitores com sistema de recomendação por grafo.
     schema: rede_social

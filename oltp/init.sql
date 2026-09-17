@@ -8,6 +8,153 @@ CREATE SCHEMA IF NOT EXISTS rede_social;
 CREATE SCHEMA IF NOT EXISTS analytics;
 
 -- =================================================================
+-- SYSTEM — operational logs (written by services, read by dbt)
+-- =================================================================
+CREATE SCHEMA IF NOT EXISTS system;
+
+CREATE TABLE system.request_log (
+    id          BIGSERIAL PRIMARY KEY,
+    service     TEXT NOT NULL,
+    method      TEXT NOT NULL,
+    endpoint    TEXT NOT NULL,
+    status_code INT,
+    duration_ms DOUBLE PRECISION,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE system.app_log (
+    id         BIGSERIAL PRIMARY KEY,
+    service    TEXT NOT NULL,
+    level      TEXT NOT NULL,
+    logger     TEXT,
+    message    TEXT NOT NULL,
+    extra      JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- =================================================================
+-- LANDING — populated by extractor on each extraction cycle
+-- =================================================================
+CREATE SCHEMA IF NOT EXISTS landing_varejo;
+CREATE SCHEMA IF NOT EXISTS landing_biblioteca;
+CREATE SCHEMA IF NOT EXISTS landing_rede_social;
+
+-- Varejo landing tables
+CREATE TABLE landing_varejo.clientes (
+    cliente_id    INTEGER,
+    nome          VARCHAR(100),
+    estado        CHAR(2),
+    segmento      VARCHAR(50),
+    data_cadastro DATE,
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_varejo.produtos (
+    produto_id     VARCHAR(20),
+    nome_produto   VARCHAR(200),
+    categoria      VARCHAR(50),
+    preco_sugerido DECIMAL(10, 2),
+    updated_at     TIMESTAMP,
+    _extracted_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_varejo.vendas (
+    venda_id      INTEGER,
+    data_venda    DATE,
+    produto_id    VARCHAR(20),
+    cliente_id    INTEGER,
+    quantidade    INTEGER,
+    valor_total   DECIMAL(10, 2),
+    status        VARCHAR(20),
+    created_at    TIMESTAMP,
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Biblioteca landing tables
+CREATE TABLE landing_biblioteca.usuarios (
+    usuario_id    INTEGER,
+    nome          VARCHAR(100),
+    tipo          VARCHAR(20),
+    email         VARCHAR(100),
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_biblioteca.livros (
+    livro_id              INTEGER,
+    titulo                VARCHAR(200),
+    isbn                  VARCHAR(13),
+    ano_publicacao        INTEGER,
+    quantidade_disponivel INTEGER,
+    updated_at            TIMESTAMP,
+    _extracted_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_biblioteca.emprestimos (
+    emprestimo_id           INTEGER,
+    usuario_id              INTEGER,
+    livro_id                INTEGER,
+    data_emprestimo         DATE,
+    data_devolucao_prevista DATE,
+    data_devolucao_real     DATE,
+    updated_at              TIMESTAMP,
+    _extracted_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_biblioteca.autores (
+    autor_id        INTEGER,
+    nome            VARCHAR(100),
+    nacionalidade   VARCHAR(50),
+    data_nascimento DATE,
+    updated_at      TIMESTAMP,
+    _extracted_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_biblioteca.multas (
+    multa_id      INTEGER,
+    emprestimo_id INTEGER,
+    valor_multa   DECIMAL(10, 2),
+    pago          BOOLEAN,
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Rede Social landing tables
+CREATE TABLE landing_rede_social.pessoas (
+    pessoa_id     INTEGER,
+    nome          VARCHAR(100),
+    idade         INTEGER,
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_rede_social.leituras (
+    pessoa_id     INTEGER,
+    livro_id      INTEGER,
+    nota          DECIMAL(3, 1),
+    data_leitura  DATE,
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_rede_social.conexoes (
+    seguidor_id   INTEGER,
+    seguido_id    INTEGER,
+    forca_conexao DECIMAL(5, 2),
+    data_conexao  DATE,
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_rede_social.generos (
+    genero_id     INTEGER,
+    nome          VARCHAR(50),
+    updated_at    TIMESTAMP,
+    _extracted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE landing_rede_social.livros (
+    livro_id       INTEGER,
+    titulo         VARCHAR(200),
+    autor          VARCHAR(100),
+    ano_publicacao INTEGER,
+    updated_at     TIMESTAMP,
+    _extracted_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- =================================================================
 -- VAREJO
 -- =================================================================
 CREATE TABLE varejo.origem_cliente (

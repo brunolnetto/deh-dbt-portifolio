@@ -4,4 +4,4 @@ select
     idade                               as age,
     cast(updated_at as timestamp)       as updated_at
 
-from {{ source('rede_social', 'pessoa') }}
+from {{ source('landing_rede_social', 'pessoas') }}

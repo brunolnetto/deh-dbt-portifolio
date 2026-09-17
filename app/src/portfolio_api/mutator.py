@@ -1,9 +1,10 @@
 """OLTP mutation sidecar.
 
-Runs as a Docker Compose service alongside the API, continuously simulating
-realistic OLTP activity across all three domains.
+Runs as a Docker Compose service, continuously simulating realistic OLTP
+activity by calling the OLTP API (oltp-api) — no direct database access.
 
 Configuration via environment variables:
+  OLTP_API_URL      OLTP API base URL (default: http://localhost:8001)
   MUTATE_INTERVAL   seconds between mutation cycles (default: 10)
   MUTATE_DOMAINS    comma-separated list of active domains (default: varejo,biblioteca,rede_social)
 """
@@ -13,21 +14,179 @@ import logging
 import os
 import random
 
-import psycopg
+import httpx
 
 log = logging.getLogger("mutator")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [mutator] %(message)s")
 
-_DSN = (
-    f"postgresql://{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}"
-    f"@{os.environ['POSTGRES_HOST']}:{os.environ.get('POSTGRES_PORT', '5432')}"
-    f"/{os.environ['POSTGRES_DB']}"
-)
+_API = os.environ.get("OLTP_API_URL", "http://localhost:8001")
 _INTERVAL = int(os.environ.get("MUTATE_INTERVAL", "10"))
 _DOMAINS = os.environ.get("MUTATE_DOMAINS", "varejo,biblioteca,rede_social").split(",")
 
-VALID_ESTADOS   = ["SP", "RJ", "MG", "PR", "SC", "RS", "BA", "PE"]
 VALID_SEGMENTOS = ["Ouro", "Prata", "Bronze"]
+VALID_STATUSES  = ["pago", "cancelado", "devolvido"]
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+async def _pick(client: httpx.AsyncClient, path: str) -> dict | None:
+    resp = await client.get(path, params={"limit": 100})
+    resp.raise_for_status()
+    items = resp.json()
+    return random.choice(items) if items else None
+
+
+# ── Varejo mutations ──────────────────────────────────────────────────────────
+
+async def _varejo_insert_venda(client: httpx.AsyncClient) -> None:
+    cliente = await _pick(client, "/varejo/clientes")
+    produto = await _pick(client, "/varejo/produtos")
+    if not cliente or not produto:
+        return
+    amount = round(random.uniform(50, 3500), 2)
+    resp = await client.post("/varejo/vendas", json={
+        "cliente_id": cliente["cliente_id"],
+        "produto_id": produto["produto_id"],
+        "quantidade": random.randint(1, 3),
+        "valor_total": amount,
+        "status": "pago",
+    })
+    resp.raise_for_status()
+    log.info("varejo  | venda criada (cliente=%s valor=%.2f)", cliente["cliente_id"], amount)
+
+
+async def _varejo_update_status(client: httpx.AsyncClient) -> None:
+    venda = await _pick(client, "/varejo/vendas")
+    if not venda:
+        return
+    new_s = random.choice([s for s in VALID_STATUSES if s != venda.get("status")])
+    resp = await client.put(f"/varejo/vendas/{venda['venda_id']}", json={"status": new_s})
+    resp.raise_for_status()
+    log.info("varejo  | venda %s status → %s", venda["venda_id"], new_s)
+
+
+async def _varejo_update_segmento(client: httpx.AsyncClient) -> None:
+    cliente = await _pick(client, "/varejo/clientes")
+    if not cliente:
+        return
+    new_seg = random.choice([s for s in VALID_SEGMENTOS if s != cliente.get("segmento")])
+    resp = await client.put(f"/varejo/clientes/{cliente['cliente_id']}", json={"segmento": new_seg})
+    resp.raise_for_status()
+    log.info("varejo  | cliente %s segmento → %s", cliente["cliente_id"], new_seg)
+
+
+# ── Biblioteca mutations ──────────────────────────────────────────────────────
+
+async def _biblioteca_insert_emprestimo(client: httpx.AsyncClient) -> None:
+    usuario = await _pick(client, "/biblioteca/usuarios")
+    livro   = await _pick(client, "/biblioteca/livros")
+    if not usuario or not livro:
+        return
+    from datetime import date, timedelta
+    due = (date.today() + timedelta(days=14)).isoformat()
+    resp = await client.post("/biblioteca/emprestimos", json={
+        "usuario_id": usuario["usuario_id"],
+        "livro_id":   livro["livro_id"],
+        "data_devolucao_prevista": due,
+    })
+    resp.raise_for_status()
+    log.info("biblioteca | empréstimo criado (usuario=%s livro=%s)", usuario["usuario_id"], livro["livro_id"])
+
+
+async def _biblioteca_return_livro(client: httpx.AsyncClient) -> None:
+    emprestimo = await _pick(client, "/biblioteca/emprestimos")
+    if not emprestimo or emprestimo.get("data_devolucao_real"):
+        return
+    from datetime import date
+    resp = await client.put(
+        f"/biblioteca/emprestimos/{emprestimo['emprestimo_id']}",
+        json={"data_devolucao_real": date.today().isoformat()},
+    )
+    resp.raise_for_status()
+    log.info("biblioteca | devolvido empréstimo %s", emprestimo["emprestimo_id"])
+
+
+# ── Rede Social mutations ─────────────────────────────────────────────────────
+
+async def _rede_insert_leitura(client: httpx.AsyncClient) -> None:
+    pessoa = await _pick(client, "/rede_social/pessoas")
+    livro  = await _pick(client, "/rede_social/livros")
+    if not pessoa or not livro:
+        return
+    from datetime import date
+    nota = round(random.uniform(1, 5), 1)
+    resp = await client.post("/rede_social/leituras", json={
+        "pessoa_id":   pessoa["pessoa_id"],
+        "livro_id":    livro["livro_id"],
+        "nota":        nota,
+        "data_leitura": date.today().isoformat(),
+    })
+    resp.raise_for_status()
+    log.info("rede_social | leitura criada (pessoa=%s nota=%.1f)", pessoa["pessoa_id"], nota)
+
+
+async def _rede_insert_conexao(client: httpx.AsyncClient) -> None:
+    pessoas = (await client.get("/rede_social/pessoas", params={"limit": 20})).json()
+    if len(pessoas) < 2:
+        return
+    a, b = random.sample(pessoas, 2)
+    resp = await client.post("/rede_social/conexoes", json={
+        "seguidor_id":  a["pessoa_id"],
+        "seguido_id":   b["pessoa_id"],
+        "forca_conexao": round(random.uniform(0.1, 1.0), 2),
+    })
+    if resp.status_code not in (200, 201, 409):  # 409 = already exists
+        resp.raise_for_status()
+    log.info("rede_social | conexão %s→%s", a["pessoa_id"], b["pessoa_id"])
+
+
+async def _rede_update_nota(client: httpx.AsyncClient) -> None:
+    leitura = await _pick(client, "/rede_social/leituras")
+    if not leitura:
+        return
+    nova_nota = round(random.uniform(1, 5), 1)
+    resp = await client.put(
+        f"/rede_social/leituras/{leitura['pessoa_id']}/{leitura['livro_id']}",
+        json={"nota": nova_nota},
+    )
+    resp.raise_for_status()
+    log.info("rede_social | nota atualizada para %.1f", nova_nota)
+
+
+# ── Domain dispatch ───────────────────────────────────────────────────────────
+
+_VAREJO_OPS     = [_varejo_insert_venda, _varejo_update_status, _varejo_update_segmento]
+_BIBLIOTECA_OPS = [_biblioteca_insert_emprestimo, _biblioteca_return_livro]
+_REDE_OPS       = [_rede_insert_leitura, _rede_insert_conexao, _rede_update_nota]
+
+_DOMAIN_OPS = {
+    "varejo":     _VAREJO_OPS,
+    "biblioteca": _BIBLIOTECA_OPS,
+    "rede_social": _REDE_OPS,
+}
+
+
+async def _run_cycle(client: httpx.AsyncClient) -> None:
+    domain = random.choice(_DOMAINS)
+    ops = _DOMAIN_OPS.get(domain, [])
+    if ops:
+        await random.choice(ops)(client)
+
+
+async def main() -> None:
+    log.info("Mutator started. API=%s  interval=%ds  domains=%s", _API, _INTERVAL, _DOMAINS)
+    async with httpx.AsyncClient(base_url=_API, timeout=10.0) as client:
+        while True:
+            try:
+                await _run_cycle(client)
+            except Exception as exc:
+                log.warning("Mutation failed: %s", exc)
+            await asyncio.sleep(_INTERVAL)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
 VALID_STATUSES  = ["pago", "cancelado", "devolvido"]
 
 

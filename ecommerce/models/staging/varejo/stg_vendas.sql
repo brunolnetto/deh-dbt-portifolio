@@ -9,4 +9,4 @@ select
     cast(created_at as timestamp)              as created_at,
     cast(updated_at as timestamp)              as updated_at
 
-from {{ source('varejo', 'origem_venda') }}
+from {{ source('landing_varejo', 'vendas') }}

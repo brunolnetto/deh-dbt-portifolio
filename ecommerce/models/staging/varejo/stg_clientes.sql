@@ -6,4 +6,4 @@ select
     cast(data_cadastro as date)      as registered_at,
     cast(updated_at as timestamp)    as updated_at
 
-from {{ source('varejo', 'origem_cliente') }}
+from {{ source('landing_varejo', 'clientes') }}

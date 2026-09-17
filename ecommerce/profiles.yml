@@ -1,7 +1,8 @@
-# ~/.dbt/profiles.yml (reference — copy to your home directory)
+# ecommerce/profiles.yml
 #
-# Or run: dbt build --profiles-dir .
-# to use this file in the project root.
+# dbt-postgres: reads from PostgreSQL landing schemas (populated by extractor)
+# and writes to PostgreSQL analytics schemas.
+# Run: dbt build --profiles-dir ecommerce/
 
 portfolio:
   target: dev

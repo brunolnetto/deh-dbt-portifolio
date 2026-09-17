@@ -5,4 +5,4 @@ select
     cast(data_conexao as date)              as connected_at,
     cast(updated_at as timestamp)           as updated_at
 
-from {{ source('rede_social', 'conexao_social') }}
+from {{ source('landing_rede_social', 'conexoes') }}
