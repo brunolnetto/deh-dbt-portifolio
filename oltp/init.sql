@@ -1,4 +1,276 @@
-CREATE SCHEMA IF NOT EXISTS shop;
+-- =================================================================
+-- PORTIFÓLIO OLTP: varejo + biblioteca + rede_social
+-- =================================================================
+
+CREATE SCHEMA IF NOT EXISTS varejo;
+CREATE SCHEMA IF NOT EXISTS biblioteca;
+CREATE SCHEMA IF NOT EXISTS rede_social;
+CREATE SCHEMA IF NOT EXISTS analytics;
+
+-- =================================================================
+-- VAREJO
+-- =================================================================
+CREATE TABLE varejo.origem_cliente (
+    cliente_id    INTEGER PRIMARY KEY,
+    nome          VARCHAR(100) NOT NULL,
+    estado        CHAR(2),
+    segmento      VARCHAR(50),
+    data_cadastro DATE NOT NULL,
+    updated_at    TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE varejo.origem_produto (
+    produto_id     VARCHAR(20) PRIMARY KEY,
+    nome_produto   VARCHAR(200),
+    categoria      VARCHAR(50),
+    preco_sugerido DECIMAL(10, 2),
+    updated_at     TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE varejo.origem_venda (
+    venda_id    SERIAL PRIMARY KEY,
+    data_venda  DATE NOT NULL,
+    produto_id  VARCHAR(20) NOT NULL REFERENCES varejo.origem_produto(produto_id),
+    cliente_id  INTEGER NOT NULL REFERENCES varejo.origem_cliente(cliente_id),
+    quantidade  INTEGER NOT NULL,
+    valor_total DECIMAL(10, 2) NOT NULL,
+    status      VARCHAR(20) NOT NULL DEFAULT 'pago'
+                    CHECK (status IN ('pendente', 'pago', 'cancelado', 'devolvido')),
+    created_at  TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT now()
+);
+
+INSERT INTO varejo.origem_cliente (cliente_id, nome, estado, segmento, data_cadastro) VALUES
+(101, 'João Silva',    'SP', 'Ouro',   '2023-01-15'),
+(102, 'Maria Santos',  'RJ', 'Bronze', '2023-05-20'),
+(103, 'Pedro Costa',   'MG', 'Prata',  '2024-02-10'),
+(104, 'Ana Oliveira',  'PR', 'Bronze', '2023-08-11'),
+(105, 'Carlos Mendes', 'SC', 'Ouro',   '2022-11-05'),
+(106, 'Beatriz Lima',  'RS', 'Prata',  '2024-01-22'),
+(107, 'Diego Souza',   'BA', 'Bronze', '2023-06-30'),
+(108, 'Fernanda Reis', 'PE', 'Prata',  '2023-09-14');
+
+INSERT INTO varejo.origem_produto (produto_id, nome_produto, categoria, preco_sugerido) VALUES
+('PROD001', 'Notebook Dell i5',     'Informática', 3500.00),
+('PROD002', 'Mouse Logitech MX',    'Informática',  250.00),
+('PROD003', 'Teclado Mecânico RGB', 'Informática',  350.00),
+('PROD004', 'Monitor 24" Full HD',  'Informática', 1200.00),
+('PROD005', 'Headset Bluetooth',    'Acessórios',   299.00),
+('PROD006', 'Webcam HD 1080p',      'Acessórios',   189.00),
+('PROD007', 'Mesa Digitalizadora',  'Acessórios',   450.00),
+('PROD008', 'SSD 1TB NVMe',         'Informática',  320.00),
+('PROD009', 'Cadeira Gamer',        'Móveis',      1800.00),
+('PROD010', 'Suporte para Monitor', 'Móveis',       150.00);
+
+INSERT INTO varejo.origem_venda (data_venda, produto_id, cliente_id, quantidade, valor_total, status) VALUES
+('2024-05-04', 'PROD001', 101, 1, 3500.00, 'pago'),
+('2024-05-05', 'PROD001', 101, 2, 7000.00, 'pago'),
+('2024-06-15', 'PROD003', 101, 1,  350.00, 'pago'),
+('2024-06-28', 'PROD002', 101, 1,  250.00, 'pago'),
+('2024-07-01', 'PROD002', 101, 1,  250.00, 'cancelado'),
+('2024-07-03', 'PROD001', 101, 1, 3500.00, 'devolvido'),
+('2024-05-10', 'PROD004', 102, 1, 1200.00, 'pago'),
+('2024-05-20', 'PROD005', 102, 1,  299.00, 'pago'),
+('2024-06-01', 'PROD006', 103, 2,  378.00, 'pago'),
+('2024-06-10', 'PROD007', 104, 1,  450.00, 'cancelado'),
+('2024-06-25', 'PROD008', 105, 1,  320.00, 'pago'),
+('2024-07-05', 'PROD009', 106, 1, 1800.00, 'pago'),
+('2024-07-10', 'PROD002', 107, 3,  750.00, 'pago'),
+('2024-07-15', 'PROD010', 108, 2,  300.00, 'pendente'),
+('2024-07-20', 'PROD003', 103, 1,  350.00, 'devolvido');
+
+-- =================================================================
+-- BIBLIOTECA
+-- =================================================================
+CREATE TABLE biblioteca.autor (
+    autor_id        SERIAL PRIMARY KEY,
+    nome            VARCHAR(100) NOT NULL,
+    nacionalidade   VARCHAR(50),
+    data_nascimento DATE,
+    updated_at      TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE biblioteca.livro (
+    livro_id              SERIAL PRIMARY KEY,
+    titulo                VARCHAR(200) NOT NULL,
+    isbn                  VARCHAR(13) UNIQUE,
+    ano_publicacao        INTEGER,
+    quantidade_disponivel INTEGER DEFAULT 0,
+    updated_at            TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE biblioteca.usuario (
+    usuario_id SERIAL PRIMARY KEY,
+    nome       VARCHAR(100) NOT NULL,
+    tipo       VARCHAR(20) CHECK (tipo IN ('aluno', 'professor')) DEFAULT 'aluno',
+    email      VARCHAR(100) UNIQUE,
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE biblioteca.livro_autor (
+    livro_id INTEGER REFERENCES biblioteca.livro(livro_id),
+    autor_id INTEGER REFERENCES biblioteca.autor(autor_id),
+    PRIMARY KEY (livro_id, autor_id)
+);
+
+CREATE TABLE biblioteca.emprestimo (
+    emprestimo_id           SERIAL PRIMARY KEY,
+    usuario_id              INTEGER REFERENCES biblioteca.usuario(usuario_id),
+    livro_id                INTEGER REFERENCES biblioteca.livro(livro_id),
+    data_emprestimo         DATE NOT NULL DEFAULT CURRENT_DATE,
+    data_devolucao_prevista DATE NOT NULL,
+    data_devolucao_real     DATE,
+    updated_at              TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE biblioteca.multa (
+    multa_id      SERIAL PRIMARY KEY,
+    emprestimo_id INTEGER UNIQUE REFERENCES biblioteca.emprestimo(emprestimo_id),
+    valor_multa   DECIMAL(10, 2),
+    pago          BOOLEAN DEFAULT FALSE,
+    updated_at    TIMESTAMP NOT NULL DEFAULT now()
+);
+
+INSERT INTO biblioteca.autor (nome, nacionalidade, data_nascimento) VALUES
+('Machado de Assis',   'Brasileiro', '1839-06-21'),
+('Clarice Lispector',  'Brasileira', '1920-12-10'),
+('Jorge Amado',        'Brasileiro', '1912-08-10'),
+('Guimarães Rosa',     'Brasileiro', '1908-06-27'),
+('Graciliano Ramos',   'Brasileiro', '1892-10-27');
+
+INSERT INTO biblioteca.livro (titulo, isbn, ano_publicacao, quantidade_disponivel) VALUES
+('Dom Casmurro',             '9788520927978', 1899, 3),
+('A Hora da Estrela',        '9788532518101', 1977, 2),
+('Gabriela, Cravo e Canela', '9788535906295', 1958, 2),
+('Grande Sertão: Veredas',   '9788520922534', 1956, 1),
+('Memórias do Cárcere',      '9788520936046', 1953, 2),
+('O Alienista',              '9788520929866', 1882, 4),
+('A Paixão Segundo G.H.',    '9788532518118', 1964, 2),
+('Capitães da Areia',        '9788535906301', 1937, 3);
+
+INSERT INTO biblioteca.usuario (nome, tipo, email) VALUES
+('João Ferreira',  'aluno',     'joao@biblioteca.br'),
+('Maria Oliveira', 'professor', 'maria@biblioteca.br'),
+('Carlos Santos',  'aluno',     'carlos@biblioteca.br'),
+('Ana Pereira',    'aluno',     'ana@biblioteca.br'),
+('Roberto Lima',   'professor', 'roberto@biblioteca.br'),
+('Sandra Ramos',   'aluno',     'sandra@biblioteca.br');
+
+INSERT INTO biblioteca.livro_autor (livro_id, autor_id) VALUES
+(1, 1), (2, 2), (3, 3), (4, 4),
+(5, 5), (6, 1), (7, 2), (8, 3);
+
+INSERT INTO biblioteca.emprestimo
+    (usuario_id, livro_id, data_emprestimo, data_devolucao_prevista, data_devolucao_real)
+VALUES
+(1, 1, '2024-05-01', '2024-05-15', '2024-05-14'),
+(2, 4, '2024-05-10', '2024-06-10', NULL),
+(3, 2, '2024-04-01', '2024-04-15', '2024-04-20'),
+(4, 6, '2024-05-20', '2024-06-03', '2024-06-02'),
+(5, 5, '2024-03-01', '2024-03-15', NULL),
+(6, 3, '2024-05-05', '2024-05-19', '2024-05-18'),
+(1, 7, '2024-06-01', '2024-06-15', NULL),
+(3, 1, '2024-04-25', '2024-05-09', '2024-05-08'),
+(4, 8, '2024-05-15', '2024-05-29', '2024-05-28'),
+(2, 6, '2024-06-05', '2024-06-19', NULL);
+
+INSERT INTO biblioteca.multa (emprestimo_id, valor_multa, pago) VALUES
+(3, 15.00, TRUE),
+(5, 30.00, FALSE);
+
+-- =================================================================
+-- REDE SOCIAL
+-- =================================================================
+CREATE TABLE rede_social.pessoa (
+    pessoa_id  SERIAL PRIMARY KEY,
+    nome       VARCHAR(100) NOT NULL,
+    idade      INTEGER,
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE rede_social.livro (
+    livro_id       SERIAL PRIMARY KEY,
+    titulo         VARCHAR(200) NOT NULL,
+    autor          VARCHAR(100),
+    ano_publicacao INTEGER,
+    updated_at     TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE rede_social.genero (
+    genero_id  SERIAL PRIMARY KEY,
+    nome       VARCHAR(50) UNIQUE NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE rede_social.conexao_social (
+    seguidor_id    INTEGER REFERENCES rede_social.pessoa(pessoa_id),
+    seguido_id     INTEGER REFERENCES rede_social.pessoa(pessoa_id),
+    forca_conexao  DECIMAL(5, 2),
+    data_conexao   DATE DEFAULT CURRENT_DATE,
+    updated_at     TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (seguidor_id, seguido_id),
+    CHECK (seguidor_id != seguido_id)
+);
+
+CREATE TABLE rede_social.leitura (
+    pessoa_id    INTEGER REFERENCES rede_social.pessoa(pessoa_id),
+    livro_id     INTEGER REFERENCES rede_social.livro(livro_id),
+    nota         DECIMAL(3, 1),
+    data_leitura DATE DEFAULT CURRENT_DATE,
+    updated_at   TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (pessoa_id, livro_id),
+    CHECK (nota >= 0 AND nota <= 5)
+);
+
+CREATE TABLE rede_social.livro_genero (
+    livro_id   INTEGER REFERENCES rede_social.livro(livro_id),
+    genero_id  INTEGER REFERENCES rede_social.genero(genero_id),
+    PRIMARY KEY (livro_id, genero_id)
+);
+
+CREATE TABLE rede_social.pessoa_preferencia (
+    pessoa_id  INTEGER REFERENCES rede_social.pessoa(pessoa_id),
+    genero_id  INTEGER REFERENCES rede_social.genero(genero_id),
+    PRIMARY KEY (pessoa_id, genero_id)
+);
+
+INSERT INTO rede_social.pessoa (nome, idade) VALUES
+('Ana Silva', 28), ('Bruno Costa', 35), ('Carla Mendes', 42),
+('Daniel Santos', 31), ('Evelyn Rocha', 27), ('Fabio Lima', 40),
+('Gisele Pires', 33), ('Helder Souza', 29), ('Igor Dias', 36), ('Julia Barros', 24);
+
+INSERT INTO rede_social.livro (titulo, autor, ano_publicacao) VALUES
+('1984', 'George Orwell', 1949),
+('Sapiens', 'Yuval Harari', 2011),
+('Cem Anos de Solidão', 'Gabriel García Márquez', 1967),
+('Admirável Mundo Novo', 'Aldous Huxley', 1932),
+('Meditações', 'Marco Aurélio', 180),
+('Duna', 'Frank Herbert', 1965),
+('O Alquimista', 'Paulo Coelho', 1988),
+('Fundação', 'Isaac Asimov', 1951);
+
+INSERT INTO rede_social.genero (nome) VALUES
+('Ficção Científica'), ('Distopia'), ('História'),
+('Filosofia'), ('Fantasia'), ('Drama'), ('Romance');
+
+INSERT INTO rede_social.livro_genero (livro_id, genero_id) VALUES
+(1,1),(1,2),(2,3),(3,7),(4,1),(4,2),(5,4),(6,1),(7,4),(7,5),(8,1);
+
+INSERT INTO rede_social.pessoa_preferencia (pessoa_id, genero_id) VALUES
+(1,1),(1,2),(2,3),(2,4),(3,7),(4,1),(5,6),(6,3),(7,1),(8,3),(8,4),(9,7),(10,1);
+
+INSERT INTO rede_social.conexao_social (seguidor_id, seguido_id, forca_conexao) VALUES
+(1,2,0.8),(2,3,0.9),(3,1,0.7),(4,1,0.6),(4,2,0.6),(4,3,0.5),
+(3,5,0.85),(5,6,0.75),(6,7,0.95),(7,8,0.8),(8,9,0.6),(9,10,0.9),
+(1,4,0.4),(10,1,0.2),(5,1,0.5),(2,7,0.6);
+
+INSERT INTO rede_social.leitura (pessoa_id, livro_id, nota, data_leitura) VALUES
+(1,1,5.0,'2024-01-15'),(1,3,4.5,'2024-02-20'),(2,2,5.0,'2024-01-10'),
+(2,1,3.0,'2024-03-05'),(3,3,4.8,'2024-02-28'),(4,1,5.0,'2024-01-20'),
+(4,2,2.5,'2024-03-10'),(5,4,5.0,'2024-04-01'),(6,5,4.9,'2024-04-10'),
+(7,6,4.7,'2024-05-01'),(8,7,4.8,'2024-05-15'),(9,8,5.0,'2024-06-01'),
+(10,4,4.2,'2024-06-10'),(7,1,4.5,'2024-01-05'),(3,2,4.0,'2024-02-01');
+
 
 create table shop.customers (
     customer_id bigint generated always as identity primary key,

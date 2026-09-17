@@ -1,0 +1,17 @@
+# ~/.dbt/profiles.yml (reference — copy to your home directory)
+#
+# Or run: dbt build --profiles-dir .
+# to use this file in the project root.
+
+portfolio:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5437') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'dbt') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'dbt') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'portifolio') }}"
+      schema: public
+      threads: 4
