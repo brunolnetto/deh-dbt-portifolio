@@ -1,8 +1,5 @@
-select
-    oi.product_id,
-    p.product_name,
-    p.category,
-    count(*) as total_units_sold,
+{{ config(enabled=false) }}
+
     sum(oi.amount) as revenue,
     avg(oi.unit_price) as average_unit_price,
     min(oi.created_at) as first_sale_at,

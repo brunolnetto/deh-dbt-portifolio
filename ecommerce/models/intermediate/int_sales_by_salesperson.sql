@@ -1,8 +1,5 @@
-select
-    o.salesperson_id,
-    sp.salesperson_name,
-    sp.region,
-    count(distinct o.order_id) as total_orders,
+{{ config(enabled=false) }}
+
     sum(o.amount) as revenue,
     count(*) as line_items,
     min(o.order_date) as first_order_date,

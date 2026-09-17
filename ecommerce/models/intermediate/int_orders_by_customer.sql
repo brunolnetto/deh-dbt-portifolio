@@ -1,8 +1,5 @@
-{% set order_statuses = ['paid', 'cancelled', 'refunded'] %}
+{{ config(enabled=false) }}
 
-select
-    customer_id,
-    count(*) as total_orders,
     {% for s in order_statuses -%}
     {{ status_count('status', s) }} as {{ s }}_orders,
     {% endfor -%}

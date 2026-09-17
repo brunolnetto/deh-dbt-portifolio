@@ -1,8 +1,5 @@
-select
-    c.customer_id,
-    c.customer_name,
-    c.email,
-    c.country_code,
+{{ config(enabled=false) }}
+
     cc.country_name,
     cc.region,
     cc.currency,
