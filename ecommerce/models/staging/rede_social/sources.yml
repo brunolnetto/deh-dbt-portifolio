@@ -1,0 +1,60 @@
+version: 2
+
+sources:
+  - name: rede_social
+    description: Rede social de leitores com sistema de recomendação por grafo.
+    schema: rede_social
+
+    tables:
+      - name: pessoa
+        columns:
+          - name: pessoa_id
+            data_tests: [not_null, unique]
+          - name: nome
+            data_tests: [not_null]
+
+      - name: livro
+        columns:
+          - name: livro_id
+            data_tests: [not_null, unique]
+          - name: titulo
+            data_tests: [not_null]
+
+      - name: genero
+        columns:
+          - name: genero_id
+            data_tests: [not_null, unique]
+          - name: nome
+            data_tests: [not_null, unique]
+
+      - name: conexao_social
+        columns:
+          - name: seguidor_id
+            data_tests: [not_null]
+          - name: seguido_id
+            data_tests: [not_null]
+          - name: forca_conexao
+            data_tests: [not_null]
+
+      - name: leitura
+        columns:
+          - name: pessoa_id
+            data_tests: [not_null]
+          - name: livro_id
+            data_tests: [not_null]
+          - name: nota
+            data_tests: [not_null]
+
+      - name: livro_genero
+        columns:
+          - name: livro_id
+            data_tests: [not_null]
+          - name: genero_id
+            data_tests: [not_null]
+
+      - name: pessoa_preferencia
+        columns:
+          - name: pessoa_id
+            data_tests: [not_null]
+          - name: genero_id
+            data_tests: [not_null]

@@ -1,0 +1,66 @@
+version: 2
+
+sources:
+  - name: biblioteca
+    description: Sistema de gerenciamento de acervo da biblioteca.
+    schema: biblioteca
+
+    tables:
+      - name: livro
+        columns:
+          - name: livro_id
+            data_tests: [not_null, unique]
+          - name: titulo
+            data_tests: [not_null]
+          - name: isbn
+            data_tests: [unique]
+          - name: quantidade_disponivel
+            data_tests: [not_null]
+
+      - name: autor
+        columns:
+          - name: autor_id
+            data_tests: [not_null, unique]
+          - name: nome
+            data_tests: [not_null]
+
+      - name: usuario
+        columns:
+          - name: usuario_id
+            data_tests: [not_null, unique]
+          - name: nome
+            data_tests: [not_null]
+          - name: email
+            data_tests: [unique]
+          - name: tipo
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: ['aluno', 'professor']
+
+      - name: emprestimo
+        columns:
+          - name: emprestimo_id
+            data_tests: [not_null, unique]
+          - name: usuario_id
+            data_tests: [not_null]
+          - name: livro_id
+            data_tests: [not_null]
+          - name: data_emprestimo
+            data_tests: [not_null]
+          - name: data_devolucao_prevista
+            data_tests: [not_null]
+
+      - name: multa
+        columns:
+          - name: multa_id
+            data_tests: [not_null, unique]
+          - name: emprestimo_id
+            data_tests: [not_null, unique]
+
+      - name: livro_autor
+        columns:
+          - name: livro_id
+            data_tests: [not_null]
+          - name: autor_id
+            data_tests: [not_null]

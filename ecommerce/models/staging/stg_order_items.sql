@@ -1,8 +1,5 @@
-select
-    order_item_id,
-    order_id,
-    product_id,
-    quantity,
+{{ config(enabled=false) }}
+
     cast(unit_price as numeric(12, 2)) as unit_price,
     cast(amount as numeric(12, 2)) as amount,
     cast(created_at as timestamp without time zone) as created_at,
