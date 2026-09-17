@@ -1,794 +1,212 @@
-# dbt Mastery — Pipeline Analítico com PostgreSQL
+# Portfolio DEH — Multi-Domain Analytics Platform
 
-Este projeto foi criado como material prático para um curso de **dbt (Data Build Tool)** focado em padrões de produção.
+Plataforma analítica de produção para **3 domínios independentes** (Varejo, Biblioteca, Rede Social) com dbt, FastAPI, PostgreSQL e integração MCP para Claude.
 
-A proposta é simular um pipeline analítico realista, partindo de um banco transacional PostgreSQL com suporte a soft deletes, aplicando transformações avançadas com dbt (incremental models, snapshots, contracts, semantic models) e chegando a modelos analíticos organizados em camadas de staging, intermediate e marts.
-
-O ambiente permite alterar os dados transacionais durante a execução do curso, incluindo a injeção intencional de problemas de qualidade para demonstrar testes do dbt em funcionamento.
-
----
-
-## Objetivos
-
-Ao longo do projeto são demonstrados os fundamentos e padrões avançados de dbt:
-
-### Conceitos Fundamentais
-* criação e configuração de um projeto dbt;
-* definição de `sources` e `seeds`;
-* uso de `ref()` e `source()`;
-* organização de modelos em camadas;
-* criação de modelos SQL;
-* materializações (view, table, ephemeral);
-* testes genéricos e SQL customizados;
-* macros com Jinja;
-* documentação e lineage;
-* execução com `dbt run`, `dbt test`, `dbt build`.
-
-### Padrões de Produção
-* **soft deletes**: manutenção de histórico com coluna `deleted_at`;
-* **incremental models**: atualização eficiente com merge strategy;
-* **snapshots**: histórico dimensional (SCD Type 2);
-* **model contracts**: garantia de contrato com tipos PostgreSQL enforçados;
-* **generic tests com severity**: testes que avisamem vez de falhar a build;
-* **tags e selectors**: seleção granular de modelos por atributos;
-* **macros avançadas**: reutilização com Jinja loops;
-* **semantic models**: definição de métrica com MetricFlow;
-* **CI/CD**: validação automática via GitHub Actions.
+Este projeto demonstra padrões avançados de data engineering e analytics:
+- **Multi-domínio com isolamento de schema** via macros dbt
+- **Arquitetura em 3 camadas**: staging → intermediate → marts
+- **REST API** com endpoints específicos por domínio
+- **MCP tools** para integração com Claude
+- **OLTP mutations** via sidecar e CLI
+- **Observação BEFORE/AFTER** com snapshots automáticos
+- **CI/CD** com validação de builds por domínio
 
 ---
 
-## Arquitetura
+## 📊 Domínios (Domains)
 
-O projeto utiliza um pequeno banco PostgreSQL para representar o sistema OLTP com suporte a histórico via soft deletes.
+### 1. **Varejo** (Retail E-Commerce)
+- **OLTP Tables**: origen_cliente, origin_produto, origin_venda
+- **Staging Models**: stg_clientes, stg_produtos, stg_vendas
+- **Marts**: dim_clientes, dim_produtos, fct_vendas (incremental), mart_clientes_vendas
+- **Analytics**: Customers, products, sales by segment/state, revenue trends
+- **Snapshot**: clientes_snapshot (SCD Type 2 on segmento changes)
 
-```text
-PostgreSQL OLTP (com histórico de soft-deletes)
-│
-├── customers
-└── orders (com deleted_at)
-        │
-        ▼
-      dbt
-        │
-        ├── staging (propagação de deleted_at)
-        │
-        ├── intermediate (filtro de histórico)
-        │
-        ├── snapshots (SCD Type 2)
-        │
-        └── marts (contratos, métricas)
-                │
-                ▼
-        modelos analíticos
-```
+### 2. **Biblioteca** (Library Management)
+- **OLTP Tables**: usuario, livro, emprestimo, multa, autor, livro_autor
+- **Staging Models**: stg_usuarios, stg_livros, stg_emprestimos, stg_autores
+- **Marts**: dim_livros, dim_usuarios, fct_emprestimos (incremental), mart_usuario_emprestimos
+- **Analytics**: Books inventory, user loans, overdue tracking, fines, author popularity
+- **Tracking**: Late returns, automatic fines calculation
 
-Também utilizamos:
-
-```text
-country_codes.csv (seed de referência)
-```
-
-O fluxo completo é aproximadamente:
-
-```text
-customers source
-      │
-      ▼
-stg_customers
-      │
-      ▼
-int_customers_enriched ◄──── country_codes seed
-      │
-      ▼
-dim_customers ◄── customers_snapshot (SCD Type 2)
-
-
-orders source (deleted_at)
-      │
-      ▼
-stg_orders (expõe deleted_at)
-      │
-      ▼
-fct_orders (incremental, merge, retém deleted_at)
-      │
-      ▼
-int_orders_by_customer (filtra deleted_at)
-      │
-      ▼
-mart_customer_sales
-      ▲
-      │
-dim_customers
-```
+### 3. **Rede Social** (Social Reading Network)
+- **OLTP Tables**: pessoa, livro, leitura, conexao_social, genero, pessoa_preferencia
+- **Staging Models**: stg_pessoas, stg_leituras, stg_conexoes, stg_generos
+- **Marts**: dim_pessoas, dim_livros_rede, fct_leituras, fct_conexoes, mart_recomendacoes
+- **Analytics**: Reading ratings, social connections, personalized recommendations
+- **Graph Analytics**: Social connection strength, community detection
 
 ---
 
-## Estrutura do projeto
+## 🚀 Quick Start
 
-```text
-.
-├── .gitattributes                    # Normalização LF
-├── docker-compose.yml
-│
-├── oltp/
-│   └── init.sql                      # Schema com soft-delete support
-│
-├── scripts/
-│   └── mutate.py                     # Simulação de alterações OLTP
-│
-├── .github/workflows/
-│   └── dbt-ci.yml                    # CI com PostgreSQL service
-│
-├── ecommerce/
-│   ├── dbt_project.yml               # Config com tags por folder
-│   ├── selectors.yml                 # Seletores nomeados (finance, orders_pipeline)
-│   ├── .gitignore
-│   │
-│   ├── seeds/
-│   │   └── country_codes.csv
-│   │
-│   ├── macros/
-│   │   ├── normalize_email.sql
-│   │   ├── amount_for_status.sql
-│   │   ├── status_count.sql          # Macro avançada com Jinja
-│   │   └── tests/
-│   │       └── positive_values.sql   # Generic test reusável
-│   │
-│   ├── tests/
-│   │   ├── assert_positive_order_amount.sql
-│   │   ├── assert_no_future_orders.sql
-│   │   ├── assert_known_country_codes.sql
-│   │   └── assert_order_timestamps_consistent.sql
-│   │
-│   ├── snapshots/
-│   │   └── customers_snapshot.yml    # SCD Type 2 snapshot
-│   │
-│   ├── models/
-│   │   ├── staging/
-│   │   │   ├── sources.yml
-│   │   │   ├── schema.yml
-│   │   │   ├── stg_customers.sql
-│   │   │   └── stg_orders.sql        # Propaga deleted_at
-│   │   │
-│   │   ├── intermediate/
-│   │   │   ├── schema.yml
-│   │   │   ├── int_customers_enriched.sql
-│   │   │   └── int_orders_by_customer.sql  # Filtra deleted_at
-│   │   │
-│   │   ├── mart/
-│   │   │   ├── schema.yml            # Contrato enforçado (fct_orders)
-│   │   │   ├── dim_customers.sql
-│   │   │   ├── fct_orders.sql        # Incremental com merge strategy
-│   │   │   └── mart_customer_sales.sql
-│   │   │
-│   │   └── semantic/
-│   │       ├── semantic_orders.yml      # Pedido: pedidos, receita, reembolso
-│   │       ├── semantic_products.yml    # Produto: itens, receita por item, preço médio
-│   │       └── semantic_salespeople.yml # Vendedor: pedidos e receita por vendedor
-│   │
-│   ├── analyses/
-│   └── README.md
-│
-└── logs/
-    └── query_log.sql
-```
+### Prerequisites
+- Docker + Docker Compose
+- Python 3.13+
+- dbt-core, dbt-postgres
+- PostgreSQL client (psql)
+
+### 1. Start Infrastructure
+
+\\\ash
+make up           # Spin up postgres + api + mutator
+sleep 5
+make dbt-seed     # Load seeds (estados_brasil.csv)
+make dbt-build    # Build all 3 domain models
+\\\
+
+### 2. Verify API
+
+\\\ash
+# REST Endpoints
+curl http://localhost:8000/api/v1/varejo/dashboard
+curl http://localhost:8000/api/v1/biblioteca/dashboard
+curl http://localhost:8000/api/v1/rede_social/dashboard
+\\\
+
+### 3. Run Demo
+
+\\\ash
+make demo         # Multi-domain demonstration with mutations
+\\\
 
 ---
 
-## Banco transacional
+## 📁 Project Structure
 
-O PostgreSQL representa uma aplicação operacional simples com suporte a soft deletes.
-
-### `customers`
-
-```sql
-customer_id BIGINT PRIMARY KEY
-name TEXT
-email TEXT UNIQUE
-country_code TEXT
-created_at TIMESTAMP WITH TIME ZONE
-updated_at TIMESTAMP WITH TIME ZONE
-```
-
-### `orders`
-
-```sql
-order_id BIGINT PRIMARY KEY
-customer_id BIGINT REFERENCES customers
-order_date DATE
-amount NUMERIC
-status TEXT
-created_at TIMESTAMP WITH TIME ZONE
-updated_at TIMESTAMP WITH TIME ZONE
-deleted_at TIMESTAMP WITH TIME ZONE  -- Soft delete indicator
-```
-
-A coluna `deleted_at`:
-* `NULL` = registro ativo
-* `NOT NULL` = registro logicamente deletado
-
-Isso permite recuperar histórico sem perder referências transacionais.
+- **oltp/init.sql** - OLTP schemas for 3 domains
+- **ecommerce/** - dbt project (portfolio)
+  - **models/staging/** - Raw data models
+  - **models/intermediate/** - Enrichment & aggregations
+  - **models/mart/** - Analytics dimensions & facts
+  - **snapshots/** - SCD Type 2 (clientes_snapshot)
+  - **seeds/** - Reference data
+- **app/src/portfolio_api/** - FastAPI application
+  - **infrastructure/** - Repositories per domain
+  - **presentation/api/** - REST endpoints
+  - **presentation/mcp/** - Claude integration tools
+  - **mutator.py** - Async mutation sidecar
+  - **cli.py** - Manual CLI mutations
+  - **observe.py** - BEFORE/AFTER observation
+- **scripts/** - Automation scripts
+- **Makefile** - DRY command targets
+- **docker-compose.yml** - Services orchestration
+- **.github/workflows/dbt-ci.yml** - CI/CD pipeline
 
 ---
 
-## Camadas do dbt
+## 🔌 REST API Endpoints
 
-### Staging
-
-Os modelos de staging representam os dados de origem de forma limpa e consistente.
-
-Responsabilidades:
-
-* renomear colunas;
-* aplicar casts;
-* normalizar strings;
-* padronizar valores;
-* **propagar `deleted_at` sem filtro** (decisão fica com camadas posteriores);
-* manter granularidade próxima da origem.
-
-Modelos: `stg_customers`, `stg_orders`
-
-**Importante:** `stg_orders` expõe a coluna `deleted_at`. Nenhum filtro é aplicado aqui.
-
-```sql
-select
-    order_id,
-    customer_id,
-    order_date,
-    amount,
-    status,
-    created_at,
-    updated_at,
-    deleted_at  -- Propagado, não filtrado
-from {{ source('shop', 'orders') }}
-```
+| Domain | Endpoint | Description |
+|--------|----------|-------------|
+| Varejo | GET /api/v1/varejo/clientes | List customers |
+| Varejo | GET /api/v1/varejo/produtos | List products |
+| Varejo | GET /api/v1/varejo/vendas | List sales |
+| Varejo | GET /api/v1/varejo/dashboard | Sales metrics |
+| Biblioteca | GET /api/v1/biblioteca/livros | List books |
+| Biblioteca | GET /api/v1/biblioteca/usuarios | List users |
+| Biblioteca | GET /api/v1/biblioteca/emprestimos | List loans |
+| Biblioteca | GET /api/v1/biblioteca/dashboard | Library metrics |
+| Rede Social | GET /api/v1/rede_social/pessoas | List people |
+| Rede Social | GET /api/v1/rede_social/leituras | List readings |
+| Rede Social | GET /api/v1/rede_social/recomendacoes/{pessoa_id} | Recommendations |
+| Rede Social | GET /api/v1/rede_social/dashboard | Network metrics |
 
 ---
 
-### Intermediate
+## 🤖 MCP Tools (Claude Integration)
 
-A camada intermediate contém transformações auxiliares com lógica de negócio.
-
-#### `int_customers_enriched`
-
-Combina clientes com o seed `country_codes`.
-
-Atributos: customer_id, customer_name, email, country_code, country_name, region, currency, created_at, updated_at
-
-#### `int_orders_by_customer`
-
-Agrega informações de pedidos **ativos** por cliente.
-
-Grão: 1 linha = 1 cliente
-
-**Filtra:** `where deleted_at is null` (exclui pedidos soft-deletados)
-
-Usa macro avançada `status_count()` em loop Jinja:
-
-```sql
-{% set order_statuses = ['paid', 'cancelled', 'refunded'] %}
-select customer_id, count(*) as total_orders,
-  {% for s in order_statuses -%}
-  {{ status_count('status', s) }} as {{ s }}_orders,
-  {% endfor -%}
-  ...
-from {{ ref('fct_orders') }}
-where deleted_at is null
-group by customer_id
-```
-
-Atributos: customer_id, total_orders, paid_orders, cancelled_orders, refunded_orders, revenue, refunded_amount, average_paid_order_value, first_order_date, last_order_date
+8 tools available for Claude via POST /mcp:
+- get_varejo_dashboard, list_varejo_clientes
+- get_biblioteca_dashboard, list_biblioteca_livros
+- get_rede_social_dashboard, list_rede_social_leituras, get_recomendacoes
 
 ---
 
-### Marts
+## 📦 Makefile Commands
 
-Os marts representam contratos analíticos destinados ao consumo.
+### Infrastructure
+\\\ash
+make up              # Start services
+make down            # Stop services
+make reset           # Full reset: down, up, seed, build
+\\\
 
-#### `dim_customers`
+### dbt
+\\\ash
+make dbt-seed        # Load seeds
+make dbt-build       # Build all models
+make dbt-test        # Run tests
+make dbt-snapshot    # Run snapshots
+\\\
 
-Dimensão de clientes com histórico (via snapshot).
+### Domain Builds (using generic target)
+\\\ash
+make build-varejo
+make build-biblioteca
+make build-rede
+\\\
 
-Grão: 1 linha = 1 cliente
+### Mutations
+\\\ash
+make mutate-varejo cmd=insert-venda
+make mutate-biblioteca cmd=return-livro
+make mutate-rede cmd=insert-leitura
+\\\
 
-Atributos: customer_id, customer_name, email, country_code, country_name, region, currency, created_at, updated_at
-
-#### `fct_orders` ⭐ Incremental com Merge
-
-Tabela fato de pedidos **incremental** com contrato enforçado.
-
-Grão: 1 linha = 1 pedido (inclui soft-deletados)
-
-**Configuração:**
-```yaml
-config:
-  materialized: 'incremental'
-  unique_key: 'order_id'
-  incremental_strategy: 'merge'
-```
-
-**Predicado Incremental:**
-```sql
-{% if is_incremental() %}
-where updated_at > (select coalesce(max(updated_at), '1900-01-01'::timestamptz) from {{ this }})
-{% endif %}
-```
-
-**Contrato (enforçado):** Todos os 13 atributos com tipos PostgreSQL validados:
-- order_id: bigint (not_null, unique)
-- customer_id: bigint (not_null, relationships)
-- order_date: date (not_null)
-- amount: numeric (not_null, positive_values com severity: warn)
-- status: text (not_null)
-- is_paid, is_cancelled, is_refunded: integer
-- recognized_revenue, refunded_amount: numeric (not_null)
-- created_at, updated_at: timestamp with time zone (not_null)
-- **deleted_at: timestamp with time zone (nullable)** ← Retém histórico
-
-Atributos: order_id, customer_id, order_date, amount, status, is_paid, is_cancelled, is_refunded, recognized_revenue, refunded_amount, created_at, updated_at, deleted_at
-
-#### `mart_customer_sales`
-
-Modelo analítico final com visão de vendas por cliente.
-
-Grão: 1 linha = 1 cliente
-
-Atributos: customer_id, customer_name, email, country_name, region, currency, total_orders, paid_orders, cancelled_orders, refunded_orders, revenue, refunded_amount, average_paid_order_value, first_order_date, last_order_date
+### Observation & Pipelines
+\\\ash
+make observe domain=varejo cmd=insert-venda
+make run-all         # Full pipeline
+make demo            # Comprehensive demo
+\\\
 
 ---
 
-## Snapshots (SCD Type 2)
+## 🔄 OLTP Mutations
 
-O projeto inclui um snapshot YAML para rastrear mudanças em clientes:
+### CLI Interface
+\\\ash
+python -m portfolio_api.cli varejo insert-venda
+python -m portfolio_api.cli biblioteca return-livro
+python -m portfolio_api.cli rede_social insert-leitura
+\\\
 
-```yaml
-snapshots:
-  - name: customers_snapshot
-    relation: source('shop', 'customers')
-    config:
-      unique_key: customer_id
-      strategy: timestamp
-      updated_at: updated_at
-```
-
-Cria histórico com:
-- `dbt_scd_id`: ID único do registro histórico
-- `dbt_valid_from`: Quando o registro começou a valer
-- `dbt_valid_to`: Quando o registro expirou (NULL = atual)
-- `dbt_updated_at`: Timestamp da mudança
-
-Execute:
-```bash
-dbt snapshot
-```
+### Sidecar Service
+Automatically runs with \docker compose up\ (MUTATE_INTERVAL=10s)
 
 ---
 
-## Macros
+## 🔍 Observation Tool
 
-### Normalização de email
+Snapshots OLTP+Analytics → Mutation → dbt rebuild → After snapshot
 
-```sql
-{% macro normalize_email(column_name) %}
-    lower(trim({{ column_name }}))
-{% endmacro %}
-```
-
-### Valor para status
-
-```sql
-{% macro amount_for_status(amount_column, status_column, expected_status) %}
-    case
-        when {{ status_column }} = '{{ expected_status }}'
-        then {{ amount_column }}
-        else 0
-    end
-{% endmacro %}
-```
-
-### Status count ⭐ (Avançada)
-
-```sql
-{% macro status_count(status_column, expected_status) %}
-    sum(case when {{ status_column }} = '{{ expected_status }}' then 1 else 0 end)
-{% endmacro %}
-```
-
-Usada com Jinja loops em `int_orders_by_customer`.
+\\\ash
+make observe domain=varejo cmd=insert-venda
+\\\
 
 ---
 
-## Testes
+## 🚀 CI/CD Pipeline
 
-### Restrições do PostgreSQL
-
-Protegem integridade transacional: PRIMARY KEY, FOREIGN KEY, NOT NULL, UNIQUE, CHECK.
-
-### Generic tests do dbt
-
-Reutilizáveis com YAML:
-- `not_null`
-- `unique`
-- `accepted_values`
-- `relationships`
-- **`positive_values`** ⭐ (custom, definido em `macros/tests/positive_values.sql`)
-
-Exemplo com severity:
-```yaml
-- name: amount
-  data_tests:
-    - positive_values:
-        severity: warn  # Aviso em vez de falha
-```
-
-### Testes SQL customizados (singular)
-
-Retornam 0 linhas = PASS, 1+ linhas = FAIL:
-- `assert_positive_order_amount`
-- `assert_no_future_orders`
-- `assert_known_country_codes`
-- `assert_order_timestamps_consistent`
-
----
-
-## Tags e Seletores
-
-### Tags por folder (dbt_project.yml)
-
-```yaml
-models:
-  ecommerce:
-    staging: +tags: [staging]
-    intermediate: +tags: [intermediate]
-    mart: +tags: [marts]
-```
-
-Além disso:
-- `fct_orders`: tags [marts, finance, incremental]
-- `mart_customer_sales`: tags [marts, finance]
-
-### Seletores nomeados (selectors.yml)
-
-```yaml
-selectors:
-  - name: finance
-    definition:
-      method: tag
-      value: finance
-```
-
-Uso:
-```bash
-dbt build --selector finance      # Apenas fct_orders + mart_customer_sales
-dbt ls --selector orders_pipeline  # DAG completo de fct_orders
-```
-
----
-
-## Semantic Models e Métricas
-
-O projeto inclui três modelos semânticos separados, todos compatíveis com MetricFlow (v0.212.0):
-
-* `orders`: pedidos, receita, GMV, taxa de reembolso e proporções por pedido;
-* `products`: itens vendidos, receita por item e preço médio unitário;
-* `salespeople`: pedidos e receita por vendedor.
-
-### `orders`
-
-```yaml
-semantic_models:
-  - name: orders
-    model: ref('fct_orders')
-    entities:
-      - name: order
-        type: primary
-        expr: order_id
-      - name: customer
-        type: foreign
-        expr: customer_id
-      - name: salesperson
-        type: foreign
-        expr: salesperson_id
-    dimensions:
-      - name: order_date
-        type: time
-        time_granularity: day
-      - name: status
-        type: categorical
-```
-
-### `products`
-
-```yaml
-semantic_models:
-  - name: products
-    model: ref('fct_order_items')
-    entities:
-      - name: order_item
-        type: primary
-        expr: order_item_id
-      - name: product
-        type: foreign
-        expr: product_id
-    dimensions:
-      - name: created_at
-        type: time
-        time_granularity: day
-```
-
-### `salespeople`
-
-```yaml
-semantic_models:
-  - name: salespeople
-    model: ref('fct_orders')
-    entities:
-      - name: salesperson
-        type: primary
-        expr: salesperson_id
-      - name: order
-        type: foreign
-        expr: order_id
-    dimensions:
-      - name: order_date
-        type: time
-        time_granularity: day
-```
-
-As métricas expostas no projeto agora incluem:
-
-* pedidos: `orders`, `order_count`, `purchasers`, `revenue`, `gross_merchandise_value`, `paid_orders`, `refunded_orders`, `refund_amount`, `average_order_value`, `refund_rate`, `refund_amount_ratio`;
-* produto: `items_sold`, `product_revenue`, `average_unit_price`;
-* vendedor: `salesperson_orders`, `salesperson_paid_orders`, `salesperson_refunded_orders`, `salesperson_revenue`, `salesperson_gmv`, `salesperson_average_order_value`, `salesperson_refund_rate`.
-
----
-
-## CI/CD com GitHub Actions
-
-O projeto inclui workflow `.github/workflows/dbt-ci.yml`:
-
-1. **PostgreSQL Service:** Container 17 com schema OLTP pré-carregado
-2. **dbt parse:** Validação de sintaxe
-3. **dbt build:** Execução completa (models, seeds, tests)
-
-Executa automaticamente em PRs para validação antes do merge.
-
----
-
-## Simulação de alterações
-
-O script `scripts/mutate.py` permite modificar o banco OLTP:
-
-### Operações normais
-
-```bash
-python scripts/mutate.py insert-customer
-python scripts/mutate.py insert-order
-python scripts/mutate.py update-customer
-python scripts/mutate.py update-order
-python scripts/mutate.py delete-order          # Delete permanente
-python scripts/mutate.py soft-delete-order     # Soft delete (deleted_at)
-python scripts/mutate.py restore-order         # Limpa deleted_at
-python scripts/mutate.py late-arriving-order   # Insere com order_date antiga
-python scripts/mutate.py backdate-update       # Atualiza updated_at para past
-```
-
-### Injeção de problemas
-
-```bash
-python scripts/mutate.py bug-negative-amount
-python scripts/mutate.py bug-future-order
-python scripts/mutate.py bug-invalid-country
-python scripts/mutate.py bug-duplicate-email
-```
-
-Após alteração, execute:
-```bash
-dbt build
-```
-
----
-
-## Executando o projeto
-
-### Subir PostgreSQL
-
-```bash
-docker compose up -d
-```
-
-### Validar configuração
-
-```bash
-dbt debug
-```
-
-### Carregar seeds
-
-```bash
+GitHub Actions validates each domain independently:
+\\\ash
 dbt seed
-```
-
-### Executar modelos
-
-```bash
-dbt run
-```
-
-### Executar testes
-
-```bash
-dbt test
-```
-
-### Snapshot (SCD Type 2)
-
-```bash
-dbt snapshot
-```
-
-### Construir tudo (models + seeds + tests)
-
-```bash
-dbt build
-```
-
-### Compilação
-
-Para ver SQL gerado:
-
-```bash
-dbt compile
-```
-
-Arquivos em `target/compiled/`.
-
-### Documentação
-
-Gerar:
-```bash
-dbt docs generate
-```
-
-Servir:
-```bash
-dbt docs serve
-```
-
-Explore modelos, colunas, descrições, dependências, sources, testes, lineage.
+dbt build --select tag:varejo
+dbt build --select tag:biblioteca
+dbt build --select tag:rede_social
+\\\
 
 ---
 
-## Seleção de modelos
+## 🎯 Key Takeaways
 
-### Por tag
+✅ Multi-domain architecture with isolated schemas  
+✅ dbt best practices: incremental, snapshots, macros, tests  
+✅ Modern Python stack: FastAPI, async, type hints  
+✅ Production patterns: repository, pooling, env config  
+✅ API integration: REST, MCP, sidecar mutations  
+✅ Data observability: BEFORE/AFTER with rebuilds  
+✅ Infrastructure as Code: Docker, GitHub Actions, Makefile  
 
-```bash
-dbt build --tag finance
-dbt build --tag incremental
-dbt build --tag marts
-```
-
-### Por seletor nomeado
-
-```bash
-dbt build --selector finance
-dbt ls --selector orders_pipeline
-```
-
-### Por DAG
-
-```bash
-dbt build --select fct_orders              # Apenas fct_orders
-dbt build --select +fct_orders             # fct_orders + ancestors
-dbt build --select fct_orders+             # fct_orders + descendants
-dbt build --select +fct_orders+            # DAG completo
-```
-
-### Estado
-
-```bash
-dbt build --select state:modified+         # Modelos modificados + downstream
-```
-
----
-
-## Padrões-chave demonstrados
-
-### Soft Deletes
-
-Coluna `deleted_at` em vez de DELETE:
-- Preserva referências transacionais
-- Permite recuperação
-- Histórico para análise
-- Staging propaga, camadas posteriores filtram
-
-### Incremental Models
-
-`fct_orders` com merge strategy:
-- Detecta inserções/atualizações via `updated_at`
-- Eficiência em grandes volumes
-- Mantém histórico com `deleted_at`
-
-### Snapshots (SCD Type 2)
-
-Rastreamento de dimensões mutáveis:
-- Histórico completo de mudanças
-- Valid from/to timestamps
-- Múltiplos registros por entidade
-
-### Contracts
-
-`fct_orders` enforça contrato:
-- Tipos PostgreSQL explícitos
-- Detecção de breaking changes
-- Integração com `dbt parse`
-
-### Generic Tests com Severity
-
-Não bloqueia build:
-```yaml
-severity: warn  # Aviso em vez de erro
-```
-
-### Tags e Selectors
-
-Organização granular:
-- Por funcionalidade (finance, incremental)
-- Por layer (staging, intermediate, marts)
-- Seletores nomeados para workflows comuns
-
-### Semantic Models
-
-Definição métrica única, múltiplas queries:
-- MetricFlow resolve a métrica
-- Independente de model específico
-- Suporte a dimensões, filtros
-
----
-
-## Comandos principais
-
-```bash
-dbt debug
-dbt seed
-dbt snapshot
-dbt run
-dbt test
-dbt build
-dbt compile
-dbt docs generate
-dbt docs serve
-dbt parse
-python scripts/mutate.py simulate
-```
-
----
-
-## Resultado esperado
-
-Ao final, compreender:
-
-```text
-Dados transacionais (com soft-delete)
-        ↓
-      source (deleted_at propagado)
-        ↓
-     staging (sem filtro, apenas limpeza)
-        ↓
-   intermediate (lógica de negócio, filtra soft-deletes)
-        ↓
-facts / dimensions (contratos, incremental, snapshot)
-        ↓
-       marts (consumo, métricas semânticas)
-        ↓
-   BI / Analytics
-```
-
-Além de compreender:
-- Diferença entre integridade transacional e qualidade analítica
-- Como manter histórico com soft deletes
-- Eficiência com incremental models
-- Tradeoffs de merge vs outros strategies
-- Validação com contracts
-- Seleção de recursos com tags/selectors
+Perfect for multi-tenant analytics platforms.
