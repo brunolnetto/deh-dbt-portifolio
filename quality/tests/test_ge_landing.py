@@ -1,8 +1,7 @@
-"""Great Expectations validation for landing tables using the GE v1 Pandas-based API."""
+"""Great Expectations validation for landing tables — using pandas assertions."""
 import os
 from typing import Any
 
-import great_expectations as gx
 import pandas as pd
 import psycopg
 import pytest
@@ -19,108 +18,53 @@ def _load(schema: str, table: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=cols)
 
 
-def _run_suite(df: pd.DataFrame, name: str, expectations: list[dict]) -> None:
-    """
-    Run a GE v1 ExpectationSuite on a DataFrame.
-    
-    Args:
-        df: DataFrame to validate
-        name: Suite name (used for context)
-        expectations: List of expectation dicts with 'type' and 'kwargs' keys
-            e.g., [
-                {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-                {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'cliente_id'}},
-            ]
-    """
-    ctx = gx.get_context()
-    ds = ctx.data_sources.add_pandas(name=f"ds_{name}")
-    asset = ds.add_dataframe_asset(name=name)
-    batch_def = asset.add_batch_definition_whole_dataframe("batch")
-    
-    suite = ctx.suites.add(gx.ExpectationSuite(name=name))
-    for exp in expectations:
-        exp_type = exp['type']
-        exp_kwargs = exp.get('kwargs', {})
-        suite.add_expectation(gx.Expectation(type=exp_type, kwargs=exp_kwargs))
-    
-    vdef = ctx.validation_definitions.add(
-        gx.ValidationDefinition(name=name, data=batch_def, suite=suite)
-    )
-    result = vdef.run(batch_parameters={"dataframe": df})
-    assert result.success, f"GE suite '{name}' failed:\n{result}"
-
-
 def test_ge_clientes():
-    _run_suite(
-        _load("landing_varejo", "clientes"),
-        "clientes",
-        [
-            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'cliente_id'}},
-            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'cliente_id'}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'nome'}},
-        ],
-    )
+    """Validate landing_varejo.clientes — row count, nulls, uniqueness."""
+    df = _load("landing_varejo", "clientes")
+    assert len(df) > 0, "clientes: row count must be > 0"
+    assert df['cliente_id'].notna().all(), "clientes: cliente_id contains NULLs"
+    assert df['cliente_id'].is_unique, "clientes: cliente_id is not unique"
+    assert df['nome'].notna().all(), "clientes: nome contains NULLs"
 
 
 def test_ge_produtos():
-    _run_suite(
-        _load("landing_varejo", "produtos"),
-        "produtos",
-        [
-            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'produto_id'}},
-            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'produto_id'}},
-            {'type': 'expect_column_values_to_be_between', 'kwargs': {'column': 'preco_sugerido', 'min_value': 0}},
-        ],
-    )
+    """Validate landing_varejo.produtos — row count, nulls, uniqueness, price range."""
+    df = _load("landing_varejo", "produtos")
+    assert len(df) > 0, "produtos: row count must be > 0"
+    assert df['produto_id'].notna().all(), "produtos: produto_id contains NULLs"
+    assert df['produto_id'].is_unique, "produtos: produto_id is not unique"
+    assert (df['preco_sugerido'] >= 0).all(), "produtos: preco_sugerido has negative values"
 
 
 def test_ge_vendas():
-    _run_suite(
-        _load("landing_varejo", "vendas"),
-        "vendas",
-        [
-            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'venda_id'}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'cliente_id'}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'produto_id'}},
-        ],
-    )
+    """Validate landing_varejo.vendas — row count, required columns non-null."""
+    df = _load("landing_varejo", "vendas")
+    assert len(df) > 0, "vendas: row count must be > 0"
+    assert df['venda_id'].notna().all(), "vendas: venda_id contains NULLs"
+    assert df['cliente_id'].notna().all(), "vendas: cliente_id contains NULLs"
+    assert df['produto_id'].notna().all(), "vendas: produto_id contains NULLs"
 
 
 def test_ge_usuarios():
-    _run_suite(
-        _load("landing_biblioteca", "usuarios"),
-        "usuarios",
-        [
-            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'usuario_id'}},
-            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'usuario_id'}},
-        ],
-    )
+    """Validate landing_biblioteca.usuarios — row count, nulls, uniqueness."""
+    df = _load("landing_biblioteca", "usuarios")
+    assert len(df) > 0, "usuarios: row count must be > 0"
+    assert df['usuario_id'].notna().all(), "usuarios: usuario_id contains NULLs"
+    assert df['usuario_id'].is_unique, "usuarios: usuario_id is not unique"
 
 
 def test_ge_emprestimos():
-    _run_suite(
-        _load("landing_biblioteca", "emprestimos"),
-        "emprestimos",
-        [
-            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'emprestimo_id'}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'usuario_id'}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'livro_id'}},
-        ],
-    )
+    """Validate landing_biblioteca.emprestimos — row count, required columns non-null."""
+    df = _load("landing_biblioteca", "emprestimos")
+    assert len(df) > 0, "emprestimos: row count must be > 0"
+    assert df['emprestimo_id'].notna().all(), "emprestimos: emprestimo_id contains NULLs"
+    assert df['usuario_id'].notna().all(), "emprestimos: usuario_id contains NULLs"
+    assert df['livro_id'].notna().all(), "emprestimos: livro_id contains NULLs"
 
 
 def test_ge_pessoas():
-    _run_suite(
-        _load("landing_rede_social", "pessoas"),
-        "pessoas",
-        [
-            {'type': 'expect_table_row_count_to_be_between', 'kwargs': {'min_value': 1}},
-            {'type': 'expect_column_values_to_not_be_null', 'kwargs': {'column': 'pessoa_id'}},
-            {'type': 'expect_column_values_to_be_unique', 'kwargs': {'column': 'pessoa_id'}},
-        ],
-    )
+    """Validate landing_rede_social.pessoas — row count, nulls, uniqueness."""
+    df = _load("landing_rede_social", "pessoas")
+    assert len(df) > 0, "pessoas: row count must be > 0"
+    assert df['pessoa_id'].notna().all(), "pessoas: pessoa_id contains NULLs"
+    assert df['pessoa_id'].is_unique, "pessoas: pessoa_id is not unique"
