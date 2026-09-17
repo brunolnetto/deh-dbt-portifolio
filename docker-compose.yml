@@ -15,6 +15,11 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - ./oltp/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build:
@@ -26,17 +31,18 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
-  mcp:
+  mutator:
     build:
       context: ./app
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-    stdin_open: true
-    tty: true
-    command: ["python", "-m", "ecommerce_api.mcp_server"]
+      MUTATE_INTERVAL: "${MUTATE_INTERVAL:-10}"
+    command: ["python", "-m", "portfolio_api.cli"]
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy

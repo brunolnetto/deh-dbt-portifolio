@@ -1,7 +1,7 @@
 [project]
-name = "ecommerce-api"
-version = "0.1.0"
-description = "REST and MCP interface over the dbt ecommerce analytics layer."
+name = "portfolio-api"
+version = "1.0.0"
+description = "REST and MCP interface over the DEH Portfolio Analytics warehouse (varejo + biblioteca + rede_social)."
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115",
@@ -17,7 +17,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ecommerce_api"]
+packages = ["src/portfolio_api"]
 
 [tool.uv]
 dev-dependencies = [

@@ -24,4 +24,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
 # Default: REST API. Override with `mcp` for the MCP server.
-CMD ["uvicorn", "ecommerce_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "portfolio_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

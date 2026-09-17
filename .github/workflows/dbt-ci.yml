@@ -1,7 +1,9 @@
-﻿name: dbt CI
+﻿name: dbt CI — Portfolio
 
 on:
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
@@ -14,7 +16,7 @@ jobs:
         env:
           POSTGRES_USER: dbt
           POSTGRES_PASSWORD: dbt
-          POSTGRES_DB: dbt
+          POSTGRES_DB: portifolio
         ports:
           - 5432:5432
         options: >-
@@ -28,7 +30,7 @@ jobs:
       POSTGRES_PORT: 5432
       POSTGRES_USER: dbt
       POSTGRES_PASSWORD: dbt
-      POSTGRES_DB: dbt
+      POSTGRES_DB: portifolio
 
     steps:
       - uses: actions/checkout@v4
@@ -39,14 +41,14 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Seed OLTP schema
-        run: PGPASSWORD=dbt psql -h localhost -U dbt -d dbt -f oltp/init.sql
+      - name: Seed OLTP schemas (varejo + biblioteca + rede_social)
+        run: PGPASSWORD=dbt psql -h localhost -U dbt -d portifolio -f oltp/init.sql
 
       - name: Write dbt profiles
         run: |
           mkdir -p ~/.dbt
           cat > ~/.dbt/profiles.yml << 'EOF'
-          ecommerce:
+          portfolio:
             target: ci
             outputs:
               ci:
@@ -55,7 +57,7 @@ jobs:
                 port: 5432
                 user: dbt
                 password: dbt
-                dbname: dbt
+                dbname: portifolio
                 schema: public
                 threads: 4
           EOF
@@ -64,6 +66,19 @@ jobs:
         working-directory: ecommerce
         run: uv run dbt parse
 
-      - name: dbt build
+      - name: dbt seed
         working-directory: ecommerce
-        run: uv run dbt build
+        run: uv run dbt seed
+
+      - name: dbt build — varejo
+        working-directory: ecommerce
+        run: uv run dbt build --select tag:varejo
+
+      - name: dbt build — biblioteca
+        working-directory: ecommerce
+        run: uv run dbt build --select tag:biblioteca
+
+      - name: dbt build — rede_social
+        working-directory: ecommerce
+        run: uv run dbt build --select tag:rede_social
+
