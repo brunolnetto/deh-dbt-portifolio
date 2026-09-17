@@ -1,0 +1,33 @@
+checks for landing_varejo.clientes:
+  - row_count > 0:
+      name: clientes must not be empty
+  - missing_count(cliente_id) = 0:
+      name: cliente_id must not be null
+  - duplicate_count(cliente_id) = 0:
+      name: cliente_id must be unique
+  - missing_count(nome) = 0:
+      name: nome must not be null
+
+checks for landing_varejo.produtos:
+  - row_count > 0:
+      name: produtos must not be empty
+  - missing_count(produto_id) = 0:
+      name: produto_id must not be null
+  - duplicate_count(produto_id) = 0:
+      name: produto_id must be unique
+  - invalid_count(preco_sugerido) = 0:
+      valid min: 0
+      name: preco_sugerido must be non-negative
+
+checks for landing_varejo.vendas:
+  - row_count > 0:
+      name: vendas must not be empty
+  - missing_count(venda_id) = 0:
+      name: venda_id must not be null
+  - missing_count(cliente_id) = 0:
+      name: vendas.cliente_id must not be null
+  - missing_count(produto_id) = 0:
+      name: vendas.produto_id must not be null
+  - invalid_count(valor_total) = 0:
+      valid min: 0
+      name: valor_total must be non-negative

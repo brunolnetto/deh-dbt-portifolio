@@ -7,9 +7,7 @@ dependencies = [
     # OLTP API + Analytics API
     "psycopg[pool,binary]>=3.2",
     # Extractor
-    "httpx>=0.27",
-    "pyarrow>=18",
-    "boto3>=1.35",
+    "dlt[rest_api,postgres,filesystem,s3]>=1.4",
     # Shared
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -24,6 +22,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/portfolio_api", "src/oltp_api", "src/extractor"]
+
+[tool.dlt]
+pipeline_storage = "/tmp/dlt_pipelines"
 
 [tool.uv]
 dev-dependencies = [

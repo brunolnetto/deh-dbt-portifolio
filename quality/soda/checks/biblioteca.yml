@@ -1,0 +1,42 @@
+checks for landing_biblioteca.usuarios:
+  - row_count > 0:
+      name: usuarios must not be empty
+  - missing_count(usuario_id) = 0:
+      name: usuario_id must not be null
+  - duplicate_count(usuario_id) = 0:
+      name: usuario_id must be unique
+  - missing_count(nome) = 0:
+      name: nome must not be null
+
+checks for landing_biblioteca.livros:
+  - row_count > 0:
+      name: livros must not be empty
+  - missing_count(livro_id) = 0:
+      name: livro_id must not be null
+  - duplicate_count(livro_id) = 0:
+      name: livro_id must be unique
+
+checks for landing_biblioteca.emprestimos:
+  - row_count > 0:
+      name: emprestimos must not be empty
+  - missing_count(emprestimo_id) = 0:
+      name: emprestimo_id must not be null
+  - missing_count(usuario_id) = 0:
+      name: emprestimos.usuario_id must not be null
+  - missing_count(livro_id) = 0:
+      name: emprestimos.livro_id must not be null
+
+checks for landing_biblioteca.autores:
+  - row_count > 0:
+      name: autores must not be empty
+  - missing_count(autor_id) = 0:
+      name: autor_id must not be null
+  - duplicate_count(autor_id) = 0:
+      name: autor_id must be unique
+
+checks for landing_biblioteca.multas:
+  - missing_count(emprestimo_id) = 0:
+      name: multas.emprestimo_id must not be null
+  - invalid_count(valor_multa) = 0:
+      valid min: 0
+      name: valor_multa must be non-negative

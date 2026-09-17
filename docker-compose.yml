@@ -95,6 +95,19 @@ services:
       oltp-api:
         condition: service_started
 
+  quality:
+    build:
+      context: ./quality
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - quality
+
 volumes:
   postgres_data:
   rustfs_data:

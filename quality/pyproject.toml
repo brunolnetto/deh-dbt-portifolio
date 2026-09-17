@@ -1,0 +1,21 @@
+[project]
+name = "portfolio-quality"
+version = "1.0.0"
+description = "Data quality gates for the DEH Portfolio pipeline (pytest + Great Expectations + SODA)."
+requires-python = ">=3.11"
+dependencies = [
+    "great-expectations>=1.0,<2",
+    "soda-core-postgres>=3.3",
+    "pytest>=8",
+    "psycopg[binary]>=3.2",
+    "pandas>=2",
+    "sqlalchemy>=2",
+    "python-dotenv>=1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

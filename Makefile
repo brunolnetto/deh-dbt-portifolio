@@ -78,6 +78,17 @@ build-biblioteca:
 build-rede:
 	$(MAKE) build domain=rede_social
 
+# ── Quality Gates ─────────────────────────────────────────────────────────
+
+quality-check:
+	docker compose --profile quality up --build --abort-on-container-exit quality
+
+quality-shell:
+	docker compose run --rm --profile quality quality bash
+
+quality-local:
+	cd quality && pip install -e . -q && python -m pytest tests/ -v --tb=short
+
 # ── Mutações OLTP ─────────────────────────────────────────────────────────
 
 mutate:

@@ -1,0 +1,37 @@
+checks for landing_rede_social.pessoas:
+  - row_count > 0:
+      name: pessoas must not be empty
+  - missing_count(pessoa_id) = 0:
+      name: pessoa_id must not be null
+  - duplicate_count(pessoa_id) = 0:
+      name: pessoa_id must be unique
+  - missing_count(nome) = 0:
+      name: nome must not be null
+
+checks for landing_rede_social.leituras:
+  - row_count > 0:
+      name: leituras must not be empty
+  - missing_count(leitura_id) = 0:
+      name: leitura_id must not be null
+  - missing_count(pessoa_id) = 0:
+      name: leituras.pessoa_id must not be null
+
+checks for landing_rede_social.conexoes:
+  - row_count > 0:
+      name: conexoes must not be empty
+  - missing_count(conexao_id) = 0:
+      name: conexao_id must not be null
+
+checks for landing_rede_social.generos:
+  - row_count > 0:
+      name: generos must not be empty
+  - missing_count(genero_id) = 0:
+      name: genero_id must not be null
+  - duplicate_count(genero_id) = 0:
+      name: genero_id must be unique
+
+checks for landing_rede_social.livros:
+  - row_count > 0:
+      name: livros_rede must not be empty
+  - missing_count(livro_id) = 0:
+      name: livros_rede.livro_id must not be null
