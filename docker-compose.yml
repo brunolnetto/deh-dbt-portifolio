@@ -1,5 +1,12 @@
 # docker-compose.yml
 
+networks:
+  # Shared with the Astro/Airflow project (orchestration/docker-compose.override.yml)
+  # so Cosmos DockerOperator tasks and dlt ingestion tasks can reach postgres/rustfs
+  # by service name. Created once here; Airflow's compose joins it as "external".
+  deh_network:
+    name: deh_network
+
 services:
   postgres:
     image: postgres:17
@@ -21,6 +28,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - default
+      - deh_network
 
   rustfs:
     image: rustfs/rustfs:latest
@@ -38,6 +48,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 15
+    networks:
+      - default
+      - deh_network
 
   oltp-api:
     build:
@@ -52,6 +65,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - default
+      - deh_network
 
   extractor:
     build:
@@ -82,6 +98,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - default
+      - deh_network
 
   mutator:
     build:

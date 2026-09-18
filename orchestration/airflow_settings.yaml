@@ -1,0 +1,25 @@
+# Local-only Airflow connections/variables (astro dev start loads this automatically).
+# In a real deployment these become Airflow connections/variables set via the UI,
+# CLI, or a secrets backend — never commit real credentials here.
+airflow:
+  connections:
+    - conn_id: portfolio_postgres
+      conn_type: postgres
+      conn_host: postgres
+      conn_schema: portifolio
+      conn_login: dbt
+      conn_password: dbt
+      conn_port: 5432
+    - conn_id: docker_default
+      conn_type: docker
+      conn_host: "unix://var/run/docker.sock"
+  pools: []
+  variables:
+    - variable_name: RUSTFS_ENDPOINT
+      variable_value: "rustfs:9000"
+    - variable_name: RUSTFS_ACCESS_KEY
+      variable_value: "minioadmin"
+    - variable_name: RUSTFS_SECRET_KEY
+      variable_value: "minioadmin"
+    - variable_name: PIPELINE_LOG_BUCKET
+      variable_value: "pipeline-logs"

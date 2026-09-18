@@ -1,0 +1,2 @@
+# OS-level packages installed via apt in the Astro runtime image.
+# None required — dbt itself never runs on the Airflow worker (see Dockerfile).

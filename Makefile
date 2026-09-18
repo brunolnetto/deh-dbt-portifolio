@@ -3,8 +3,8 @@
 DBT_DIR       := ecommerce
 PROFILES_DIR  := ~/.dbt
 
-.PHONY: help up down reset dbt-build dbt-test dbt-snapshot dbt-seed \
-        api-build api-up run-all demo
+.PHONY: help up down reset dbt-build dbt-test dbt-snapshot dbt-seed dbt-manifest \
+        api-build api-up run-all demo airflow-start airflow-stop dbt-runner-build
 
 help:
 	@echo "Portfolio DEH — Comandos disponíveis:"
@@ -39,6 +39,12 @@ help:
 	@echo "    make build-varejo     — Só modelos varejo"
 	@echo "    make build-biblioteca — Só modelos biblioteca"
 	@echo "    make build-rede       — Só modelos rede_social"
+	@echo ""
+	@echo "  Orquestração (Airflow/Astro + Cosmos) — ver orchestration/README.md:"
+	@echo "    make dbt-manifest     — Regenera ecommerce/target/manifest.json (Cosmos parsing)"
+	@echo "    make dbt-runner-build — Builda a imagem dbt usada pelo Cosmos (ExecutionMode.DOCKER)"
+	@echo "    make airflow-start    — astro dev start (orchestration/)"
+	@echo "    make airflow-stop     — astro dev stop (orchestration/)"
 
 # ── Infraestrutura ─────────────────────────────────────────────────────────
 
@@ -68,6 +74,9 @@ dbt-test:
 
 dbt-snapshot:
 	cd $(DBT_DIR) && dbt snapshot --profiles-dir $(PROFILES_DIR)
+
+dbt-manifest:
+	cd $(DBT_DIR) && dbt parse --profiles-dir $(PROFILES_DIR)
 
 # ── Build por Domínio (delegando ao target genérico) ────────────────────
 
@@ -119,3 +128,14 @@ run-all: up
 
 demo:
 	bash scripts/run_demo.sh
+
+# ── Orquestração (Airflow/Astro + Cosmos) ─────────────────────────────────
+
+dbt-runner-build:
+	docker build -t deh-dbt-runner:latest -f orchestration/include/dbt_runner/Dockerfile .
+
+airflow-start:
+	cd orchestration && astro dev start
+
+airflow-stop:
+	cd orchestration && astro dev stop

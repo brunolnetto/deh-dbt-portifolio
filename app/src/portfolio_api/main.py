@@ -14,6 +14,7 @@ from fastapi import FastAPI
 
 from .config import settings
 from .infrastructure.database import close_pool, init_pool
+from .middleware import RequestLogMiddleware
 from .presentation.api.varejo import router as varejo_router
 from .presentation.api.biblioteca import router as biblioteca_router
 from .presentation.api.rede_social import router as rede_social_router
@@ -38,6 +39,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.add_middleware(RequestLogMiddleware)
 
 app.include_router(varejo_router,      prefix="/api/v1/varejo",      tags=["varejo"])
 app.include_router(biblioteca_router,  prefix="/api/v1/biblioteca",  tags=["biblioteca"])

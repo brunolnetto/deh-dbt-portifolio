@@ -1,0 +1,35 @@
+version: "3.1"
+
+networks:
+  # Created by the root docker-compose.yml (`docker compose up -d postgres rustfs`
+  # from the repo root, at least once) — joined here as external so Cosmos'
+  # DockerOperator (and the dlt ingestion DAG) can reach postgres/rustfs by name.
+  deh_network:
+    external: true
+
+services:
+  scheduler:
+    networks:
+      - deh_network
+    volumes:
+      # docker.sock: lets DockerOperator launch sibling containers on the HOST
+      # engine (NOT nested Docker-in-Docker) — the standard Astro + Cosmos DOCKER
+      # execution-mode recipe.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Just enough of the dbt project for Cosmos to *parse* the DAG (manifest +
+      # profile name/target). The full project only needs to live inside the
+      # dbt_runner image used for actual execution — see include/dbt_runner/.
+      - ../ecommerce/profiles.yml:/usr/local/airflow/include/ecommerce/profiles.yml:ro
+      - ../ecommerce/target/manifest.json:/usr/local/airflow/include/ecommerce/target/manifest.json:ro
+    environment:
+      DBT_RUNNER_IMAGE: "${DBT_RUNNER_IMAGE:-deh-dbt-runner:latest}"
+      DEH_DOCKER_NETWORK: "deh_network"
+      HOST_PROJECT_DIR: "${HOST_PROJECT_DIR}"
+
+  triggerer:
+    networks:
+      - deh_network
+
+  webserver:
+    networks:
+      - deh_network

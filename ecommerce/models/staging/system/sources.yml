@@ -23,4 +23,22 @@ sources:
             data_tests: [not_null]
 
       - name: app_log
-        description: Structured application log entries.
+        description: >
+          Structured application log entries — populated by the Airflow/Cosmos
+          pipeline (dbt runs, dlt ingestion cycles) after each run, and archived
+          in full to blob storage (RustFS) under s3://pipeline-logs/.
+        columns:
+          - name: id
+            data_tests: [not_null, unique]
+          - name: service
+            description: "e.g. airflow-dbt, airflow-dlt, oltp-api, analytics-api"
+            data_tests: [not_null]
+          - name: level
+            data_tests: [not_null]
+          - name: logger
+          - name: message
+            data_tests: [not_null]
+          - name: extra
+            description: JSONB payload (dag_id, task_id, run_id, duration_s, rows, blob_path, ...)
+          - name: created_at
+            data_tests: [not_null]
