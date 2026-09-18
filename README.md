@@ -75,7 +75,7 @@ make demo         # Multi-domain demonstration with mutations
 ## 📁 Project Structure
 
 - **oltp/init.sql** - OLTP schemas for 3 domains
-- **ecommerce/** - dbt project (portfolio)
+- **portifolio/** - dbt project (portfolio)
   - **models/staging/** - Raw data models
   - **models/intermediate/** - Enrichment & aggregations
   - **models/mart/** - Analytics dimensions & facts
