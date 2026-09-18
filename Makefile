@@ -4,7 +4,8 @@ DBT_DIR       := portifolio
 PROFILES_DIR  := ~/.dbt
 
 .PHONY: help up down reset dbt-build dbt-test dbt-snapshot dbt-seed dbt-manifest \
-        api-build api-up run-all demo airflow-start airflow-stop dbt-runner-build
+        api-build api-up run-all demo airflow-start airflow-stop dbt-runner-build \
+        dbt-compile lineage
 
 help:
 	@echo "Portfolio DEH — Comandos disponíveis:"
@@ -42,10 +43,14 @@ help:
 	@echo "    make build-system     — Só modelos system (request_log + app_log)"
 	@echo ""
 	@echo "  Orquestração (Airflow/Astro + Cosmos) — ver orchestration/README.md:"
-	@echo "    make dbt-manifest     — Regenera ecommerce/target/manifest.json (Cosmos parsing)"
+	@echo "    make dbt-manifest     — Regenera portifolio/target/manifest.json (Cosmos parsing)"
 	@echo "    make dbt-runner-build — Builda a imagem dbt usada pelo Cosmos (ExecutionMode.DOCKER)"
 	@echo "    make airflow-start    — astro dev start (orchestration/)"
 	@echo "    make airflow-stop     — astro dev stop (orchestration/)"
+	@echo ""
+	@echo "  Column lineage:"
+	@echo "    make dbt-compile      — Compila o projeto (necessário p/ lineage: resolve ref()/source())"
+	@echo "    make lineage model=<nome> column=<coluna> — Traça a ascendência de uma coluna"
 
 # ── Infraestrutura ─────────────────────────────────────────────────────────
 
@@ -78,6 +83,12 @@ dbt-snapshot:
 
 dbt-manifest:
 	cd $(DBT_DIR) && dbt parse --profiles-dir $(PROFILES_DIR)
+
+dbt-compile:
+	cd $(DBT_DIR) && dbt compile --profiles-dir $(PROFILES_DIR)
+
+lineage:
+	python3 $(DBT_DIR)/tools/column_lineage.py $(model) $(column)
 
 # ── Build por Domínio (delegando ao target genérico) ────────────────────
 
