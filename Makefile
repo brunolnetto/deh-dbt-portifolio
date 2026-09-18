@@ -39,6 +39,7 @@ help:
 	@echo "    make build-varejo     — Só modelos varejo"
 	@echo "    make build-biblioteca — Só modelos biblioteca"
 	@echo "    make build-rede       — Só modelos rede_social"
+	@echo "    make build-system     — Só modelos system (request_log + app_log)"
 	@echo ""
 	@echo "  Orquestração (Airflow/Astro + Cosmos) — ver orchestration/README.md:"
 	@echo "    make dbt-manifest     — Regenera ecommerce/target/manifest.json (Cosmos parsing)"
@@ -91,6 +92,9 @@ build-biblioteca:
 
 build-rede:
 	$(MAKE) build domain=rede_social
+
+build-system:
+	$(MAKE) build domain=system
 
 # ── Quality Gates ─────────────────────────────────────────────────────────
 

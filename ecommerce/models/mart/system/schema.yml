@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: mart_request_history
+    description: >
+      One row per HTTP request, across every service that writes to
+      system.request_log (oltp-api, analytics-api). Incremental on created_at.
+    columns:
+      - name: id
+        data_tests: [not_null, unique]
+      - name: service
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ["oltp-api", "analytics-api"]
+      - name: status_code
+        data_tests: [not_null]
+      - name: created_at
+        data_tests: [not_null]
+
+  - name: mart_api_health
+    description: >
+      Hourly request-volume/latency/error-rate rollup per service — covers
+      both the OLTP API and the Analytics API (see `service`).
+    columns:
+      - name: service
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ["oltp-api", "analytics-api"]
+      - name: window_start
+        data_tests: [not_null]
+      - name: total_requests
+        data_tests: [not_null]
+
+  - name: mart_pipeline_runs
+    description: >
+      One row per completed Airflow task run (dbt_transform, dlt_ingestion),
+      sourced from system.app_log via the pipeline_log_export DAG.
+      Incremental on created_at.
+    columns:
+      - name: id
+        data_tests: [not_null, unique]
+      - name: service
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ["airflow-dbt", "airflow-dlt"]
+      - name: dag_id
+        data_tests: [not_null]
+      - name: created_at
+        data_tests: [not_null]
