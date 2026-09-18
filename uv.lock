@@ -354,6 +354,7 @@ dependencies = [
     { name = "dbt-postgres" },
     { name = "psycopg", extra = ["binary"] },
     { name = "python-dotenv" },
+    { name = "sqlglot" },
 ]
 
 [package.metadata]
@@ -361,6 +362,7 @@ requires-dist = [
     { name = "dbt-postgres", specifier = ">=1.11.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.5" },
     { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "sqlglot", specifier = ">=30.17.0" },
 ]
 
 [[package]]
