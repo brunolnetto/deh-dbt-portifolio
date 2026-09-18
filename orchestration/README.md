@@ -9,7 +9,7 @@ with every dbt/dlt task executing in its own disposable Docker container.
 
 | DAG | Schedule | What it does |
 |---|---|---|
-| `dbt_transform` | hourly | Cosmos-generated DAG — one Airflow task per dbt node (`ecommerce/`), each run in a container built from `include/dbt_runner/`. |
+| `dbt_transform` | hourly | Cosmos-generated DAG — one Airflow task per dbt node (`portifolio/`), each run in a container built from `include/dbt_runner/`. |
 | `dlt_ingestion` | every 30 min | One task per domain (varejo/biblioteca/rede_social), each running `python -m extractor.run_once` in the existing `app` image. |
 | `pipeline_log_export` | every 15 min | Archives recently completed `dbt_transform`/`dlt_ingestion` task logs to RustFS (blob storage) and writes a structured summary row to `system.app_log`, which dbt then processes via `stg_app_logs` → `mart_pipeline_runs` — the same pattern already used for OLTP/analytics API request logs (`system.request_log` → `stg_request_logs` → `mart_api_health`). |
 
@@ -19,7 +19,7 @@ with every dbt/dlt task executing in its own disposable Docker container.
 - **Cosmos** (`ExecutionMode.DOCKER`) never runs `dbt` on the Airflow worker —
   each dbt node is dispatched to a *sibling* container (via the mounted
   `docker.sock`), built from `include/dbt_runner/Dockerfile`, which bundles
-  `ecommerce/` + `profiles.yml`.
+  `portifolio/` + `profiles.yml`.
 - Cosmos still needs to *parse* the dbt project to build the DAG. Since the
   Airflow image has no dbt installed, parsing uses a pre-generated
   `manifest.json` (`LoadMode.DBT_MANIFEST`) instead of `dbt ls`.
@@ -27,7 +27,7 @@ with every dbt/dlt task executing in its own disposable Docker container.
 This means the Airflow image stays dbt-free, but requires two things kept in
 sync manually:
 
-1. **Regenerate the manifest** whenever `ecommerce/` changes:
+1. **Regenerate the manifest** whenever `portifolio/` changes:
    ```
    make dbt-manifest
    ```

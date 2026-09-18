@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-DBT_DIR       := ecommerce
+DBT_DIR       := portifolio
 PROFILES_DIR  := ~/.dbt
 
 .PHONY: help up down reset dbt-build dbt-test dbt-snapshot dbt-seed dbt-manifest \

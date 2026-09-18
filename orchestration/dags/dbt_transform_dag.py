@@ -1,4 +1,4 @@
-"""Cosmos DAG — runs the ecommerce/ dbt project as containerized tasks.
+"""Cosmos DAG — runs the portifolio/ dbt project as containerized tasks.
 
 Rendering (building the Airflow task graph) uses a pre-generated manifest.json
 (LoadMode.DBT_MANIFEST) so the Airflow worker never needs dbt installed —
@@ -21,11 +21,11 @@ from pendulum import datetime
 
 # Mounted read-only into the scheduler by docker-compose.override.yml — used
 # only for parsing (manifest + profile name/target), not for execution.
-_INCLUDE_DIR = Path("/usr/local/airflow/include/ecommerce")
+_INCLUDE_DIR = Path("/usr/local/airflow/include/portifolio")
 
 # Path baked into the dbt_runner image (see include/dbt_runner/Dockerfile) —
 # this is where each spawned container actually runs `dbt`.
-_CONTAINER_PROJECT_DIR = "/usr/app/ecommerce"
+_CONTAINER_PROJECT_DIR = "/usr/app/portifolio"
 
 DBT_RUNNER_IMAGE = os.getenv("DBT_RUNNER_IMAGE", "deh-dbt-runner:latest")
 DEH_NETWORK = os.getenv("DEH_DOCKER_NETWORK", "deh_network")

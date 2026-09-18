@@ -19,8 +19,8 @@ services:
       # Just enough of the dbt project for Cosmos to *parse* the DAG (manifest +
       # profile name/target). The full project only needs to live inside the
       # dbt_runner image used for actual execution — see include/dbt_runner/.
-      - ../ecommerce/profiles.yml:/usr/local/airflow/include/ecommerce/profiles.yml:ro
-      - ../ecommerce/target/manifest.json:/usr/local/airflow/include/ecommerce/target/manifest.json:ro
+      - ../portifolio/profiles.yml:/usr/local/airflow/include/portifolio/profiles.yml:ro
+      - ../portifolio/target/manifest.json:/usr/local/airflow/include/portifolio/target/manifest.json:ro
     environment:
       DBT_RUNNER_IMAGE: "${DBT_RUNNER_IMAGE:-deh-dbt-runner:latest}"
       DEH_DOCKER_NETWORK: "deh_network"
