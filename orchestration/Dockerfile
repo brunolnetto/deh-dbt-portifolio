@@ -1,4 +1,4 @@
-FROM astrocrpublic.azurecr.io/runtime:3.0-2
+FROM astrocrpublic.azurecr.io/runtime:3.3-2
 
 # Airflow itself never runs dbt — Cosmos only *parses* a pre-generated
 # manifest.json here (LoadMode.DBT_MANIFEST) and dispatches every dbt node to a
