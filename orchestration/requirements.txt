@@ -1,5 +1,5 @@
 # Cosmos bridges Airflow <-> dbt; [docker] pulls in apache-airflow-providers-docker
-astronomer-cosmos[docker]==1.11.*
+astronomer-cosmos[docker]==1.15.*
 
 # Log export DAG: read system.request_log / write system.app_log
 psycopg[binary]==3.2.*
