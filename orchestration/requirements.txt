@@ -5,4 +5,4 @@ astronomer-cosmos[docker]==1.11.*
 psycopg[binary]==3.2.*
 
 # Log export DAG: archive raw pipeline logs to RustFS (S3-compatible)
-boto3==1.35.*
+boto3==1.43.*
