@@ -9,7 +9,7 @@ networks:
 
 services:
   postgres:
-    image: postgres:17
+    image: postgres:19
     env_file:
       - .env
     environment:
